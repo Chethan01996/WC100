@@ -1,0 +1,2981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wingo Pattern Tracker v7.0 CHAMPION</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+  :root {
+    --bg:#060608; --surface:#0e0e16; --surface2:#15151f; --surface3:#1c1c2a;
+    --border:rgba(255,255,255,0.06); --border2:rgba(255,255,255,0.11);
+    --big:#3b82f6; --big-dim:rgba(59,130,246,0.13); --big-glow:rgba(59,130,246,0.4);
+    --sml:#ef4444; --sml-dim:rgba(239,68,68,0.13); --sml-glow:rgba(239,68,68,0.4);
+    --text:#eeeef8; --text2:#7777aa; --text3:#333355;
+    --accent:#a78bfa; --green:#22d3a5; --yellow:#fbbf24; --orange:#fb923c; --pink:#f472b6;
+    --wave:#06b6d4; --wave-dim:rgba(6,182,212,0.15); --wave-glow:rgba(6,182,212,0.4);
+    --rsi-low:#22d3a5; --rsi-high:#ef4444; --rsi-mid:#fbbf24;
+    --mono:'Space Mono',monospace; --sans:'Outfit',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;padding:20px 14px 80px;background-image:radial-gradient(ellipse 80% 40% at 50% 0%,rgba(6,182,212,0.06),transparent);}
+
+  .header{text-align:center;margin-bottom:28px;padding-top:12px;position:relative;}
+  .header h1{font-size:28px;font-weight:900;letter-spacing:-1px;background:linear-gradient(135deg,#67e8f9,#a78bfa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:3px;}
+  .header p{font-size:10px;color:var(--text2);font-family:var(--mono);letter-spacing:0.5px;}
+  .version-badge{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,rgba(6,182,212,0.18),rgba(167,139,250,0.18));border:1px solid rgba(6,182,212,0.25);border-radius:20px;padding:3px 12px;font-size:10px;font-family:var(--mono);color:var(--wave);margin-bottom:8px;}
+  .v-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+
+  .grid{max-width:900px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .card{background:var(--surface);border:0.5px solid var(--border);border-radius:16px;padding:16px 18px;}
+  .card.full{grid-column:1/-1;}
+  .card-label{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
+
+  .upload-zone{border:1px dashed var(--border2);border-radius:10px;padding:22px 14px;text-align:center;cursor:pointer;transition:all .2s;}
+  .upload-zone:hover{border-color:var(--wave);background:rgba(6,182,212,0.04);}
+  .status-line{font-size:10px;font-family:var(--mono);color:var(--text2);margin-top:8px;min-height:14px;}
+  .status-line.ok{color:var(--green);}
+  .status-line.err{color:var(--sml);}
+
+  input[type="text"],input[type="number"]{width:100%;background:var(--surface2);border:0.5px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:13px;padding:9px 12px;outline:none;margin-bottom:8px;transition:border-color .2s;}
+  input:focus{border-color:var(--wave);}
+
+  .btn{width:100%;background:linear-gradient(135deg,#0891b2,#6d28d9);color:#fff;border:none;border-radius:9px;font-family:var(--sans);font-size:13px;font-weight:700;padding:10px;cursor:pointer;transition:transform .1s,box-shadow .2s;letter-spacing:0.3px;}
+  .btn:active{transform:scale(.98);}
+  .btn:hover{box-shadow:0 0 20px rgba(8,145,178,0.45);}
+  .btn-sm{font-size:11px;padding:7px 10px;width:auto;border-radius:7px;}
+  .btn-warn{background:linear-gradient(135deg,#92400e,#b45309);}
+  .btn-neutral{background:var(--surface2);border:1px solid var(--border2);color:var(--text2);}
+  .btn-neutral.active{border-color:var(--yellow);color:var(--yellow);}
+  .btn-green{background:linear-gradient(135deg,#065f46,#059669);}
+  .btn-danger{background:linear-gradient(135deg,#7f1d1d,#dc2626);}
+  .btn-row{display:flex;gap:6px;margin-top:6px;}
+  .btn-row .btn{flex:1;}
+
+  .pred-box{border-radius:13px;padding:18px;margin-bottom:12px;border:1px solid var(--border2);transition:all 0.4s;position:relative;overflow:hidden;}
+  .pred-box::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity 0.4s;pointer-events:none;}
+  .pred-box.lock-b{background:rgba(59,130,246,.16);border-color:var(--big);box-shadow:0 0 32px rgba(59,130,246,.22);}
+  .pred-box.lock-b::before{background:radial-gradient(ellipse at 50% 0%,rgba(59,130,246,0.13),transparent 70%);opacity:1;}
+  .pred-box.lock-s{background:rgba(239,68,68,.16);border-color:var(--sml);box-shadow:0 0 32px rgba(239,68,68,.22);}
+  .pred-box.lock-s::before{background:radial-gradient(ellipse at 50% 0%,rgba(239,68,68,0.13),transparent 70%);opacity:1;}
+  .pred-main{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:8px;}
+  .pred-label{font-size:34px;font-weight:900;font-family:var(--mono);letter-spacing:2px;}
+  .pred-icon{font-size:26px;}
+  .pred-sub{text-align:center;font-size:10px;color:var(--text2);font-family:var(--mono);}
+
+  .layers{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:12px 0;}
+  .layers-bottom{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:6px 0 12px;}
+  .layer-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 8px;text-align:center;transition:border-color .3s,background .3s;}
+  .layer-card.vote-b{border-color:rgba(59,130,246,0.5);background:rgba(59,130,246,0.07);}
+  .layer-card.vote-s{border-color:rgba(239,68,68,0.5);background:rgba(239,68,68,0.07);}
+  .layer-card.vote-wave{border-color:rgba(6,182,212,0.5);background:rgba(6,182,212,0.07);}
+  .layer-card.vote-none{opacity:0.45;}
+  .layer-num{font-size:8px;font-family:var(--mono);color:var(--text3);margin-bottom:3px;letter-spacing:1px;}
+  .layer-title{font-size:9px;font-weight:700;color:var(--text2);margin-bottom:5px;line-height:1.2;}
+  .layer-vote{font-size:14px;font-weight:800;font-family:var(--mono);}
+  .layer-detail{font-size:8px;color:var(--text3);font-family:var(--mono);margin-top:3px;line-height:1.4;}
+
+  .v-meter{height:5px;background:var(--surface2);border-radius:3px;margin:6px 0;overflow:hidden;}
+  .v-fill{height:100%;width:0%;transition:width 0.6s cubic-bezier(.4,0,.2,1);border-radius:3px;}
+  .vote-bar{display:flex;gap:4px;margin:8px 0;height:22px;border-radius:6px;overflow:hidden;}
+  .vote-bar-b{background:var(--big);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;font-family:var(--mono);transition:flex .5s ease;}
+  .vote-bar-s{background:var(--sml);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;font-family:var(--mono);transition:flex .5s ease;}
+
+  .round-info{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+  .round-pill{background:var(--surface3);border:1px solid var(--border2);border-radius:6px;padding:4px 9px;font-size:9px;font-family:var(--mono);color:var(--text2);}
+  .round-pill span{color:var(--accent);font-weight:700;}
+
+  .seq-display{display:flex;gap:5px;flex-wrap:wrap;margin:6px 0;align-items:center;}
+  .seq-num{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:13px;border:1px solid var(--border2);}
+  .seq-num.is-big{background:var(--big-dim);border-color:var(--big);color:var(--big);}
+  .seq-num.is-sml{background:var(--sml-dim);border-color:var(--sml);color:var(--sml);}
+
+  .history-wrap{max-height:260px;overflow-y:auto;border:0.5px solid var(--border);border-radius:10px;}
+  table{width:100%;border-collapse:collapse;font-size:11px;}
+  th{padding:7px 10px;background:var(--surface2);color:var(--text3);position:sticky;top:0;text-align:left;font-size:9px;letter-spacing:1px;}
+  td{padding:6px 10px;border-bottom:0.5px solid var(--border);color:var(--text2);font-family:var(--mono);}
+  .tag{padding:2px 7px;border-radius:4px;font-weight:700;font-size:9px;}
+  .tag-big{background:var(--big-dim);color:var(--big);}
+  .tag-sml{background:var(--sml-dim);color:var(--sml);}
+  .round-badge{background:rgba(167,139,250,0.15);color:var(--accent);border-radius:4px;padding:1px 5px;font-size:8px;}
+  .correct-tag{color:var(--green);font-size:10px;}
+  .wrong-tag{color:var(--sml);font-size:10px;}
+
+  #engineLog{font-family:var(--mono);font-size:9px;color:var(--text2);white-space:pre-wrap;background:var(--bg);padding:10px;border-radius:8px;line-height:1.8;border:1px solid var(--border);max-height:220px;overflow-y:auto;}
+
+  .heatmap{display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin:8px 0;}
+  .heat-cell{border-radius:8px;padding:8px 4px;text-align:center;border:1px solid var(--border2);transition:all .3s;}
+  .heat-num{font-size:12px;font-weight:700;font-family:var(--mono);}
+  .heat-count{font-size:8px;color:var(--text3);font-family:var(--mono);margin-top:2px;}
+
+  .stat-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+  .stat-pill{flex:1;min-width:80px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;text-align:center;}
+  .stat-val{font-size:20px;font-weight:800;font-family:var(--mono);line-height:1;}
+  .stat-lbl{font-size:9px;color:var(--text3);margin-top:3px;font-family:var(--mono);letter-spacing:1px;}
+
+  .streak-bar{display:flex;gap:3px;margin:8px 0;flex-wrap:wrap;}
+  .streak-dot{width:18px;height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;font-family:var(--mono);}
+  .streak-dot.b{background:var(--big);}
+  .streak-dot.s{background:var(--sml);}
+
+  .donut-wrap{display:flex;align-items:center;gap:16px;}
+  .donut-svg{flex-shrink:0;}
+  .chart-legend{font-size:10px;font-family:var(--mono);}
+  .chart-legend div{margin-bottom:5px;}
+
+  .timer-display{text-align:center;font-size:28px;font-weight:800;font-family:var(--mono);color:var(--yellow);letter-spacing:2px;padding:10px 0;}
+  .timer-bar-wrap{background:var(--surface2);border-radius:4px;height:4px;overflow:hidden;}
+  .timer-bar{height:100%;background:var(--yellow);transition:width 1s linear;border-radius:4px;}
+
+  .ai-box{background:linear-gradient(135deg,rgba(6,182,212,0.07),rgba(167,139,250,0.07));border:1px solid rgba(6,182,212,0.2);border-radius:12px;padding:14px 16px;margin-top:10px;}
+  .ai-response{font-size:11px;color:var(--text2);font-family:var(--mono);white-space:pre-wrap;line-height:1.7;max-height:180px;overflow-y:auto;}
+  .ai-loading{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--wave);font-family:var(--mono);}
+  .ai-dot{width:6px;height:6px;background:var(--wave);border-radius:50%;animation:pulse 0.8s infinite;}
+  .ai-dot:nth-child(2){animation-delay:0.2s;}
+  .ai-dot:nth-child(3){animation-delay:0.4s;}
+
+  .tab-bar{display:flex;gap:4px;margin-bottom:12px;background:var(--surface2);border-radius:10px;padding:3px;flex-wrap:wrap;}
+  .tab-btn{flex:1;background:transparent;border:none;color:var(--text3);font-family:var(--sans);font-size:10px;font-weight:600;padding:6px 4px;border-radius:7px;cursor:pointer;transition:all .2s;white-space:nowrap;}
+  .tab-btn.active{background:var(--surface3);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.3);}
+  .tab-pane{display:none;}
+  .tab-pane.active{display:block;}
+
+  ::-webkit-scrollbar{width:3px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+  #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface3);border:1px solid var(--border2);border-radius:10px;padding:10px 18px;font-size:12px;font-family:var(--mono);color:var(--text);transition:transform .3s ease;z-index:999;white-space:nowrap;}
+  #toast.show{transform:translateX(-50%) translateY(0);}
+
+  .sound-badge{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-family:var(--mono);}
+
+  /* WAVE SPECIFIC */
+  .wave-canvas-wrap{background:var(--bg);border:1px solid rgba(6,182,212,0.2);border-radius:12px;padding:12px;margin:8px 0;position:relative;}
+  canvas{display:block;width:100%;border-radius:8px;}
+
+  .wave-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0;}
+  .wave-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;}
+  .wave-stat-val{font-size:18px;font-weight:800;font-family:var(--mono);}
+  .wave-stat-lbl{font-size:8px;color:var(--text3);margin-top:3px;font-family:var(--mono);letter-spacing:1px;}
+
+  .phase-badge{display:inline-flex;align-items:center;gap:6px;border-radius:8px;padding:6px 14px;font-size:11px;font-weight:700;font-family:var(--mono);margin:6px 4px 6px 0;}
+  .phase-rising{background:rgba(59,130,246,0.15);border:1px solid var(--big);color:var(--big);}
+  .phase-peak{background:rgba(251,191,36,0.15);border:1px solid var(--yellow);color:var(--yellow);}
+  .phase-falling{background:rgba(239,68,68,0.15);border:1px solid var(--sml);color:var(--sml);}
+  .phase-trough{background:rgba(34,211,165,0.15);border:1px solid var(--green);color:var(--green);}
+
+  /* RSI METER */
+  .rsi-wrap{margin:10px 0;}
+  .rsi-bar-bg{height:18px;background:linear-gradient(to right,var(--rsi-low),var(--rsi-mid),var(--rsi-high));border-radius:9px;position:relative;overflow:visible;}
+  .rsi-needle{position:absolute;top:-4px;width:4px;height:26px;background:#fff;border-radius:2px;transform:translateX(-50%);transition:left 0.6s ease;box-shadow:0 0 8px rgba(255,255,255,0.6);}
+  .rsi-labels{display:flex;justify-content:space-between;font-size:8px;font-family:var(--mono);color:var(--text3);margin-top:4px;}
+  .rsi-value{font-size:24px;font-weight:900;font-family:var(--mono);text-align:center;margin-bottom:4px;}
+  .rsi-signal{text-align:center;font-size:10px;font-family:var(--mono);margin-top:6px;}
+
+  /* CROSSOVER */
+  .crossover-box{background:var(--surface2);border-radius:10px;padding:12px;margin:8px 0;border:1px solid var(--border2);}
+  .crossover-signal{font-size:13px;font-weight:800;font-family:var(--mono);}
+
+  /* DIVERGENCE ALERT */
+  .divergence-alert{border-radius:10px;padding:12px 14px;margin:10px 0;font-family:var(--mono);font-size:11px;}
+  .divergence-alert.agree{background:rgba(34,211,165,0.1);border:1px solid var(--green);color:var(--green);}
+  .divergence-alert.disagree{background:rgba(251,191,36,0.12);border:1px solid var(--yellow);color:var(--yellow);}
+  .divergence-alert.strong-disagree{background:rgba(239,68,68,0.12);border:1px solid var(--sml);color:var(--sml);animation:pulse 1.5s infinite;}
+
+  /* 24HR PANEL */
+  .session-panel{background:var(--surface2);border-radius:12px;padding:14px;border:1px solid rgba(6,182,212,0.2);}
+  .session-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
+  .session-row label{font-size:9px;font-family:var(--mono);color:var(--text3);width:120px;flex-shrink:0;letter-spacing:1px;}
+  .session-row input{margin-bottom:0;flex:1;}
+  .session-result{background:var(--bg);border-radius:8px;padding:10px;margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--text2);line-height:2;}
+
+  /* MAGNETIC CENTER */
+  .mag-center{display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:10px;padding:10px 14px;margin:8px 0;border:1px solid var(--border);}
+  .mag-val{font-size:22px;font-weight:900;font-family:var(--mono);color:var(--wave);}
+  .mag-desc{font-size:9px;font-family:var(--mono);color:var(--text3);line-height:1.6;}
+
+  /* SMART ENGINE v6 */
+  .pred-tier{display:inline-flex;align-items:center;gap:5px;border-radius:6px;padding:3px 10px;font-size:10px;font-weight:700;font-family:var(--mono);margin-bottom:6px;}
+  .tier-high{background:rgba(34,211,165,0.15);border:1px solid var(--green);color:var(--green);}
+  .tier-medium{background:rgba(251,191,36,0.15);border:1px solid var(--yellow);color:var(--yellow);}
+  .tier-low{background:rgba(167,139,250,0.15);border:1px solid var(--accent);color:var(--accent);}
+  .tier-skip{background:rgba(255,255,255,0.06);border:1px solid var(--border2);color:var(--text3);}
+  .consensus-bar{display:flex;gap:3px;margin:6px 0;align-items:center;font-size:9px;font-family:var(--mono);color:var(--text3);}
+  .layer-acc-badge{font-size:7px;font-family:var(--mono);background:rgba(255,255,255,0.07);border-radius:3px;padding:1px 4px;color:var(--text3);margin-top:2px;display:block;}
+  .acc-good{color:var(--green)!important;}
+  .acc-bad{color:var(--sml)!important;}
+  .skip-box{background:rgba(255,255,255,0.03);border:1px dashed var(--border2);border-radius:13px;padding:18px;margin-bottom:12px;text-align:center;}
+  .skip-icon{font-size:28px;margin-bottom:6px;}
+  .skip-reason{font-size:11px;color:var(--text3);font-family:var(--mono);}
+  .smart-score{display:flex;justify-content:space-between;align-items:center;background:var(--surface3);border-radius:8px;padding:8px 12px;margin:6px 0;font-family:var(--mono);font-size:10px;}
+
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes champGlow{0%,100%{box-shadow:0 0 30px rgba(251,191,36,0.3)}50%{box-shadow:0 0 60px rgba(251,191,36,0.7),0 0 100px rgba(251,191,36,0.25)}}
+  @keyframes signalPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.85;transform:scale(1.02)}}
+  .pulsing{animation:pulse 1.5s ease-in-out infinite;}
+  .fadein{animation:fadeIn .3s ease forwards;}
+  .champ-badge{display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,rgba(251,191,36,0.18),rgba(251,191,36,0.06));border:1px solid rgba(251,191,36,0.35);border-radius:20px;padding:3px 12px;font-size:9px;font-family:var(--mono);color:var(--yellow);letter-spacing:1px;}
+  .champ-dot{width:5px;height:5px;background:var(--yellow);border-radius:50%;animation:pulse 1.2s infinite;}
+  .pred-box.champ-big{background:rgba(59,130,246,.2);border-color:#60a5fa;box-shadow:0 0 40px rgba(59,130,246,.3);animation:champGlow 2s ease-in-out infinite;}
+  .pred-box.champ-sml{background:rgba(239,68,68,.2);border-color:#f87171;box-shadow:0 0 40px rgba(239,68,68,.3);animation:champGlow 2s ease-in-out infinite;}
+  .champ-drivers{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0;}
+  .driver-chip{display:inline-flex;align-items:center;gap:4px;background:var(--surface3);border:1px solid var(--border2);border-radius:6px;padding:4px 8px;font-size:9px;font-family:var(--mono);color:var(--text2);}
+  .driver-chip.champion{border-color:var(--yellow);background:rgba(251,191,36,0.1);color:var(--yellow);}
+  .driver-chip.agree{border-color:var(--green);background:rgba(34,211,165,0.08);color:var(--green);}
+  .driver-chip.disagree{border-color:rgba(239,68,68,0.4);background:rgba(239,68,68,0.06);color:var(--sml);opacity:0.6;}
+  .conviction-wrap{margin:8px 0;}
+  .conviction-label{display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:4px;}
+  .conviction-track{height:10px;background:var(--surface2);border-radius:5px;overflow:hidden;}
+  .conviction-fill{height:100%;border-radius:5px;transition:width .6s cubic-bezier(.4,0,.2,1),background .4s;}
+  .sig-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0;}
+  .sig-panel{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
+  .sig-panel-title{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+  .sig-badge{font-size:9px;font-weight:700;font-family:var(--mono);padding:2px 7px;border-radius:4px;}
+  .sig-hot{background:rgba(251,191,36,0.15);color:var(--yellow);}
+  .sig-cold{background:rgba(255,255,255,0.06);color:var(--text3);}
+  .sig-noise{background:rgba(239,68,68,0.12);color:var(--sml);}
+  .sig-structure{background:rgba(34,211,165,0.12);color:var(--green);}
+  .sig-value{font-size:22px;font-weight:800;font-family:var(--mono);line-height:1;margin-bottom:2px;}
+  .sig-desc{font-size:9px;color:var(--text3);font-family:var(--mono);line-height:1.5;}
+  .acf-bars{display:flex;gap:3px;align-items:flex-end;height:50px;margin:6px 0;}
+  .acf-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .acf-bar{width:100%;border-radius:2px 2px 0 0;transition:height .5s ease,background .4s;min-height:2px;}
+  .acf-lbl{font-size:7px;font-family:var(--mono);color:var(--text3);}
+  .zdrift-track{height:14px;background:var(--surface3);border-radius:7px;position:relative;overflow:hidden;margin:6px 0;}
+  .zdrift-center{position:absolute;top:0;bottom:0;left:50%;width:2px;background:rgba(255,255,255,0.15);transform:translateX(-50%);}
+  .zdrift-fill{position:absolute;top:2px;bottom:2px;border-radius:5px;transition:all .5s ease;}
+  .zdrift-labels{display:flex;justify-content:space-between;font-size:8px;font-family:var(--mono);color:var(--text3);}
+  .rld-row{display:flex;align-items:center;gap:8px;margin:4px 0;}
+  .rld-label{font-size:9px;font-family:var(--mono);color:var(--text3);width:70px;flex-shrink:0;}
+  .rld-track{flex:1;height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;}
+  .rld-fill{height:100%;border-radius:3px;transition:width .5s ease;}
+  .rld-val{font-size:9px;font-family:var(--mono);color:var(--text2);width:40px;text-align:right;flex-shrink:0;}
+  .mr-trigger{display:inline-flex;align-items:center;gap:5px;border-radius:7px;padding:5px 10px;font-size:10px;font-weight:700;font-family:var(--mono);margin-top:4px;}
+  .mr-active{background:rgba(251,191,36,0.15);border:1px solid var(--yellow);color:var(--yellow);animation:signalPulse 1.5s ease-in-out infinite;}
+  .mr-quiet{background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--text3);}
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<div class="header">
+  <div class="version-badge"><span class="v-dot"></span> v9.0 · Real Period Structure · Series 50/52 Engine</div>
+  <h1>Wingo Champion Tracker</h1>
+  <p>Champion Signal System · 4-Layer Signal Intelligence · Conviction Scoring · Zero Weak-Vote Noise</p>
+</div>
+
+<div class="grid">
+
+  <!-- STEP 1 -->
+  <div class="card">
+    <div class="card-label">Step 1 — Setup</div>
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+      <div style="font-size:22px;margin-bottom:5px;">📂</div>
+      <p style="font-size:12px;color:var(--text2)">Upload .xlsx or .csv history</p>
+      <p style="font-size:9px;color:var(--text3);margin-top:3px;font-family:var(--mono)">Period ID + Number columns required</p>
+    </div>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none">
+    <div class="btn-row" style="margin-top:6px;">
+      <button id="wakeBtn" class="btn btn-neutral btn-sm" onclick="toggleWakeLock()">🔆 Screen: OFF</button>
+      <button id="soundBtn" class="btn btn-neutral btn-sm" onclick="toggleSound()">🔇 Sound: OFF</button>
+    </div>
+    <div class="status-line" id="uploadStatus">No file loaded</div>
+    <!-- DATA HEALTH PANEL -->
+    <div id="dataHealthPanel" style="display:none;margin-top:10px;background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border2);">
+      <div style="font-size:8px;font-weight:700;letter-spacing:2px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;">📊 Data Health</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        <div style="background:var(--surface3);border-radius:7px;padding:8px;text-align:center;">
+          <div id="dh_total" style="font-size:16px;font-weight:800;font-family:var(--mono);color:var(--wave)">—</div>
+          <div style="font-size:8px;color:var(--text3);margin-top:2px;font-family:var(--mono);">ROUNDS</div>
+        </div>
+        <div style="background:var(--surface3);border-radius:7px;padding:8px;text-align:center;">
+          <div id="dh_ratio" style="font-size:16px;font-weight:800;font-family:var(--mono);color:var(--yellow)">—</div>
+          <div style="font-size:8px;color:var(--text3);margin-top:2px;font-family:var(--mono);">BIG%</div>
+        </div>
+      </div>
+      <div id="dh_warning" style="margin-top:8px;font-size:9px;font-family:var(--mono);line-height:1.6;color:var(--text2);border-top:1px solid var(--border);padding-top:8px;"></div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="card">
+    <div class="card-label">Step 2 — Live Entry</div>
+    <input type="text" id="inPeriod" placeholder="Period ID (auto-fills)">
+    <input type="number" id="inNumber" placeholder="Number (0–9)" min="0" max="9">
+    <div class="btn-row">
+      <button class="btn" onclick="addRound()">➕ Add Result</button>
+      <button class="btn btn-warn btn-sm" onclick="undoLast()" title="Undo last entry">↩ Undo</button>
+    </div>
+    <div class="status-line" id="addStatus"></div>
+    <div class="card-label" style="margin-top:12px;margin-bottom:5px;">Last 6 Numbers</div>
+    <div class="seq-display" id="seqDisplay">
+      <span style="font-size:10px;color:var(--text3);font-family:var(--mono);">Waiting...</span>
+    </div>
+    <!-- SESSION WIN TRACKER -->
+    <div style="margin-top:12px;background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border2);">
+      <div style="font-size:8px;font-weight:700;letter-spacing:2px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;">🎯 Session Win Rate</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;">
+        <div style="background:var(--surface3);border-radius:7px;padding:7px;text-align:center;">
+          <div id="sess_played" style="font-size:15px;font-weight:800;font-family:var(--mono);color:var(--wave)">0</div>
+          <div style="font-size:7px;color:var(--text3);margin-top:2px;font-family:var(--mono);">PLAYED</div>
+        </div>
+        <div style="background:var(--surface3);border-radius:7px;padding:7px;text-align:center;">
+          <div id="sess_won" style="font-size:15px;font-weight:800;font-family:var(--mono);color:var(--green)">0</div>
+          <div style="font-size:7px;color:var(--text3);margin-top:2px;font-family:var(--mono);">WON</div>
+        </div>
+        <div style="background:var(--surface3);border-radius:7px;padding:7px;text-align:center;">
+          <div id="sess_rate" style="font-size:15px;font-weight:800;font-family:var(--mono);color:var(--yellow)">—</div>
+          <div style="font-size:7px;color:var(--text3);margin-top:2px;font-family:var(--mono);">WIN%</div>
+        </div>
+      </div>
+      <div id="sess_trend" style="margin-top:6px;font-size:9px;font-family:var(--mono);color:var(--text3);text-align:center;">Track predictions in real-time →</div>
+      <button class="btn btn-neutral btn-sm" style="width:100%;margin-top:6px;font-size:10px;" onclick="resetSession()">↺ Reset Session</button>
+    </div>
+  </div>
+
+  <!-- PREDICTION CARD -->
+  <div class="card full">
+    <div class="card-label">
+      <span>🏆 Champion Signal Engine v9</span>
+      <span id="marketStatus" style="color:var(--text3);font-size:9px;font-family:var(--mono);">Waiting for data</span>
+    </div>
+
+    <div id="predTierRow" style="text-align:center;margin-bottom:4px;"></div>
+    <div class="pred-box" id="predBox" style="background:var(--surface2);">
+      <div class="pred-main">
+        <div class="pred-icon" id="predIcon">⏳</div>
+        <div class="pred-label" id="predLabel" style="color:var(--text3)">WAITING</div>
+      </div>
+      <div class="pred-sub" id="predSub">Load history + enter 4+ rounds to activate engine</div>
+    </div>
+    <div id="smartScoreRow" style="display:none;" class="smart-score">
+      <span>Consensus: <span id="consensusVal" style="color:var(--accent);font-weight:700;">—</span></span>
+      <span>Margin: <span id="marginVal" style="color:var(--yellow);font-weight:700;">—</span></span>
+      <span>Active: <span id="activeVal" style="color:var(--wave);font-weight:700;">—</span></span>
+      <span>Abstentions: <span id="abstainVal" style="color:var(--text3);font-weight:700;">—</span></span>
+    </div>
+
+    <div class="v-meter"><div class="v-fill" id="confFill"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:6px;">
+      <span>Confidence</span><span id="confVal" style="font-weight:700;">0%</span>
+    </div>
+    <div class="vote-bar">
+      <div class="vote-bar-b" id="voteBarB" style="flex:1">—</div>
+      <div class="vote-bar-s" id="voteBarS" style="flex:1">—</div>
+    </div>
+
+    <!-- CHAMPION DRIVERS ROW -->
+    <div id="champDriversLabel" style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin:10px 0 4px;display:none;">Champion Drivers</div>
+    <div class="champ-drivers" id="champDrivers"></div>
+
+    <!-- CONVICTION METER -->
+    <div class="conviction-wrap" id="convictionWrap" style="display:none;">
+      <div class="conviction-label"><span>Conviction Score</span><span id="convictionPct" style="color:var(--yellow);font-weight:700;">0%</span></div>
+      <div class="conviction-track">
+        <div class="conviction-fill" id="convictionFill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- BET SIZING GUIDE -->
+    <div id="betSizingPanel" style="display:none;margin-top:12px;border-radius:12px;overflow:hidden;border:1px solid var(--border2);">
+      <div style="background:var(--surface2);padding:10px 14px;border-bottom:1px solid var(--border2);">
+        <div style="font-size:8px;font-weight:700;letter-spacing:2px;color:var(--text3);text-transform:uppercase;margin-bottom:2px;">💰 Bet Sizing Guide</div>
+        <div id="betSizingSubtitle" style="font-size:9px;color:var(--text3);font-family:var(--mono);"></div>
+      </div>
+
+      <!-- Main bet recommendation -->
+      <div style="padding:12px 14px;background:var(--surface3);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div>
+            <div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-bottom:3px;">RECOMMENDED BET</div>
+            <div id="betRecommendLabel" style="font-size:22px;font-weight:900;font-family:var(--mono);letter-spacing:1px;">—</div>
+          </div>
+          <div id="betTierBadge" style="padding:6px 14px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:1px;"></div>
+        </div>
+
+        <!-- Balance input -->
+        <div style="margin-bottom:10px;">
+          <div style="font-size:8px;color:var(--text3);font-family:var(--mono);margin-bottom:4px;">YOUR SESSION BALANCE</div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input type="number" id="betBalance" placeholder="e.g. 1000" min="1"
+              style="flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:7px 10px;color:var(--text1);font-family:var(--mono);font-size:13px;font-weight:700;"
+              oninput="updateBetSizing()">
+            <div style="font-size:9px;color:var(--text3);font-family:var(--mono);">units</div>
+          </div>
+        </div>
+
+        <!-- Bet amount display -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
+          <div style="background:var(--surface2);border-radius:8px;padding:8px;text-align:center;border:1px solid var(--border2);">
+            <div id="betAmtHigh" style="font-size:16px;font-weight:800;font-family:var(--mono);color:var(--green)">—</div>
+            <div style="font-size:7px;color:var(--text3);margin-top:2px;font-family:var(--mono);">HIGH (8%)</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:8px;padding:8px;text-align:center;border:1px solid var(--border2);">
+            <div id="betAmtMed" style="font-size:16px;font-weight:800;font-family:var(--mono);color:var(--yellow)">—</div>
+            <div style="font-size:7px;color:var(--text3);margin-top:2px;font-family:var(--mono);">MED (4%)</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:8px;padding:8px;text-align:center;border:1px solid var(--border2);">
+            <div id="betAmtLow" style="font-size:16px;font-weight:800;font-family:var(--mono);color:var(--text2)">—</div>
+            <div style="font-size:7px;color:var(--text3);margin-top:2px;font-family:var(--mono);">LOW (2%)</div>
+          </div>
+        </div>
+
+        <!-- Stop loss / Take profit -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">
+          <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:8px;text-align:center;">
+            <div id="betStopLoss" style="font-size:14px;font-weight:800;font-family:var(--mono);color:var(--sml)">—</div>
+            <div style="font-size:7px;color:var(--text3);margin-top:2px;font-family:var(--mono);">🛑 STOP LOSS (−30%)</div>
+          </div>
+          <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:8px;text-align:center;">
+            <div id="betTakeProfit" style="font-size:14px;font-weight:800;font-family:var(--mono);color:var(--green)">—</div>
+            <div style="font-size:7px;color:var(--text3);margin-top:2px;font-family:var(--mono);">🎯 TAKE PROFIT (+50%)</div>
+          </div>
+        </div>
+
+        <!-- Advice line -->
+        <div id="betAdviceLine" style="font-size:10px;font-family:var(--mono);line-height:1.6;color:var(--text2);background:var(--surface2);border-radius:8px;padding:8px 10px;border-left:3px solid var(--accent);"></div>
+      </div>
+
+      <!-- Strategy rules -->
+      <div style="padding:10px 14px;background:var(--surface2);border-top:1px solid var(--border2);">
+        <div style="font-size:8px;font-weight:700;letter-spacing:1.5px;color:var(--text3);text-transform:uppercase;margin-bottom:7px;">Strategy Rules</div>
+        <div style="font-size:9px;font-family:var(--mono);color:var(--text2);line-height:2;">
+          <div>🟢 <span style="color:var(--green);font-weight:700;">HIGH tier</span> → Bet <b>8%</b> of balance &nbsp;·&nbsp; strongest signal</div>
+          <div>🟡 <span style="color:var(--yellow);font-weight:700;">MEDIUM tier</span> → Bet <b>4%</b> of balance &nbsp;·&nbsp; decent signal</div>
+          <div>⚪ <span style="color:var(--text2);font-weight:700;">LOW tier</span> → Bet <b>2%</b> of balance &nbsp;·&nbsp; weak signal, minimum only</div>
+          <div>⛔ <span style="color:var(--sml);font-weight:700;">SKIP</span> → Bet <b>0</b> &nbsp;·&nbsp; sit this round out</div>
+          <div style="margin-top:4px;color:var(--text3);">Never bet more than 1 tier above what the tool shows.</div>
+          <div style="color:var(--text3);">Always stop when balance hits stop-loss — never chase losses.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="round-info">
+      <div class="round-pill">Round: <span id="rndNum">—</span></div>
+      <div class="round-pill">Pos in Round: <span id="rndPos">—</span></div>
+      <div class="round-pill">Total Entries: <span id="rndTotal">—</span></div>
+      <div class="round-pill">Streak: <span id="streakPill">—</span></div>
+      <div class="round-pill">Wave Phase: <span id="wavePhasePill" style="color:var(--wave)">—</span></div>
+    </div>
+
+    <!-- DIVERGENCE ALERT -->
+    <div id="divergenceAlert" class="divergence-alert agree" style="display:none;margin-top:10px;"></div>
+
+    <!-- LAYER BREAKDOWN -->
+    <div class="card-label" style="margin-top:16px;margin-bottom:7px;">Layers 1–5 (Pattern Engine)</div>
+    <div class="layers">
+      <div class="layer-card" id="layer1Card"><div class="layer-num">L1</div><div class="layer-title">Exact Numbers</div><div class="layer-vote" id="l1vote" style="color:var(--text3)">—</div><div class="layer-detail" id="l1detail">No match</div><span class="layer-acc-badge" id="l1acc">acc —</span></div>
+      <div class="layer-card" id="layer2Card"><div class="layer-num">L2</div><div class="layer-title">Size Pattern</div><div class="layer-vote" id="l2vote" style="color:var(--text3)">—</div><div class="layer-detail" id="l2detail">No match</div><span class="layer-acc-badge" id="l2acc">acc —</span></div>
+      <div class="layer-card" id="layer3Card"><div class="layer-num">L3</div><div class="layer-title">Round-Aware</div><div class="layer-vote" id="l3vote" style="color:var(--text3)">—</div><div class="layer-detail" id="l3detail">Need 11+</div><span class="layer-acc-badge" id="l3acc">acc —</span></div>
+      <div class="layer-card" id="layer4Card"><div class="layer-num">L4</div><div class="layer-title">Streak Break</div><div class="layer-vote" id="l4vote" style="color:var(--text3)">—</div><div class="layer-detail" id="l4detail">No streak</div><span class="layer-acc-badge" id="l4acc">acc —</span></div>
+      <div class="layer-card" id="layer5Card"><div class="layer-num">L5</div><div class="layer-title">Weighted Rec.</div><div class="layer-vote" id="l5vote" style="color:var(--text3)">—</div><div class="layer-detail" id="l5detail">Insufficient</div><span class="layer-acc-badge" id="l5acc">acc —</span></div>
+    </div>
+
+    <div class="card-label" style="margin-bottom:7px;">Layers 6–10 (Signal Engine)</div>
+    <div class="layers-bottom">
+      <div class="layer-card" id="layer6Card"><div class="layer-num">L6</div><div class="layer-title">Markov Chain</div><div class="layer-vote" id="l6vote" style="color:var(--text3)">—</div><div class="layer-detail" id="l6detail">Need 20+</div><span class="layer-acc-badge" id="l6acc">acc —</span></div>
+      <div class="layer-card" id="layer7Card"><div class="layer-num">L7</div><div class="layer-title">Chi-Square</div><div class="layer-vote" id="l7vote" style="color:var(--text3)">—</div><div class="layer-detail" id="l7detail">Need 30+</div><span class="layer-acc-badge" id="l7acc">acc —</span></div>
+      <div class="layer-card" id="layer8Card"><div class="layer-num">L8</div><div class="layer-title">Mean Reversion</div><div class="layer-vote" id="l8vote" style="color:var(--text3)">—</div><div class="layer-detail" id="l8detail">Need 20+</div><span class="layer-acc-badge" id="l8acc">acc —</span></div>
+      <div class="layer-card" id="layer9Card"><div class="layer-num">L9</div><div class="layer-title">Wave Signal</div><div class="layer-vote" id="l9vote" style="color:var(--wave)">—</div><div class="layer-detail" id="l9detail">Need 20+</div><span class="layer-acc-badge" id="l9acc">acc —</span></div>
+      <div class="layer-card" id="layer10Card"><div class="layer-num">L10</div><div class="layer-title">RSI + Cross</div><div class="layer-vote" id="l10vote" style="color:var(--wave)">—</div><div class="layer-detail" id="l10detail">Need 30+</div><span class="layer-acc-badge" id="l10acc">acc —</span></div>
+    </div>
+
+    <!-- SIGNAL INTELLIGENCE PANELS v7 -->
+    <div class="card-label" style="margin-top:16px;margin-bottom:8px;">
+      <span>⚡ Signal Intelligence Layer v7</span>
+      <div class="champ-badge" style="font-size:8px;"><span class="champ-dot"></span>LIVE</div>
+    </div>
+    <div class="sig-grid">
+
+      <!-- Panel 1: Autocorrelation -->
+      <div class="sig-panel">
+        <div class="sig-panel-title">
+          <span>Autocorrelation</span>
+          <span class="sig-badge" id="acfBadge">—</span>
+        </div>
+        <div class="acf-bars" id="acfBars">
+          <div class="acf-bar-wrap"><div class="acf-bar" style="height:2px;background:var(--border2)"></div><div class="acf-lbl">L1</div></div>
+          <div class="acf-bar-wrap"><div class="acf-bar" style="height:2px;background:var(--border2)"></div><div class="acf-lbl">L2</div></div>
+          <div class="acf-bar-wrap"><div class="acf-bar" style="height:2px;background:var(--border2)"></div><div class="acf-lbl">L3</div></div>
+          <div class="acf-bar-wrap"><div class="acf-bar" style="height:2px;background:var(--border2)"></div><div class="acf-lbl">L4</div></div>
+          <div class="acf-bar-wrap"><div class="acf-bar" style="height:2px;background:var(--border2)"></div><div class="acf-lbl">L5</div></div>
+          <div class="acf-bar-wrap"><div class="acf-bar" style="height:2px;background:var(--border2)"></div><div class="acf-lbl">L6</div></div>
+          <div class="acf-bar-wrap"><div class="acf-bar" style="height:2px;background:var(--border2)"></div><div class="acf-lbl">L7</div></div>
+          <div class="acf-bar-wrap"><div class="acf-bar" style="height:2px;background:var(--border2)"></div><div class="acf-lbl">L8</div></div>
+        </div>
+        <div class="sig-desc" id="acfDesc">Need 20+ rounds</div>
+      </div>
+
+      <!-- Panel 2: Entropy Window -->
+      <div class="sig-panel">
+        <div class="sig-panel-title">
+          <span>Entropy Window</span>
+          <span class="sig-badge" id="entropyBadge">—</span>
+        </div>
+        <div class="sig-value" id="entropyValue" style="color:var(--text3)">—</div>
+        <div style="height:6px;background:var(--surface3);border-radius:3px;margin:6px 0;overflow:hidden;">
+          <div id="entropyBar" style="height:100%;width:0%;border-radius:3px;transition:width .5s,background .4s;background:var(--green)"></div>
+        </div>
+        <div class="sig-desc" id="entropyDesc">0=pure pattern · 1=pure noise</div>
+      </div>
+
+      <!-- Panel 3: Run-Length Deviation -->
+      <div class="sig-panel">
+        <div class="sig-panel-title">
+          <span>Run-Length Dev</span>
+          <span class="sig-badge" id="rldBadge">—</span>
+        </div>
+        <div class="rld-row">
+          <div class="rld-label">B-runs</div>
+          <div class="rld-track"><div class="rld-fill" id="rldBFill" style="width:0%;background:var(--big)"></div></div>
+          <div class="rld-val" id="rldBVal">—</div>
+        </div>
+        <div class="rld-row">
+          <div class="rld-label">S-runs</div>
+          <div class="rld-track"><div class="rld-fill" id="rldSFill" style="width:0%;background:var(--sml)"></div></div>
+          <div class="rld-val" id="rldSVal">—</div>
+        </div>
+        <div class="sig-desc" id="rldDesc">Geometric expectation deviation</div>
+      </div>
+
+      <!-- Panel 4: Z-Score Drift -->
+      <div class="sig-panel">
+        <div class="sig-panel-title">
+          <span>Z-Score Drift</span>
+          <span class="sig-badge" id="zscoreBadge">—</span>
+        </div>
+        <div class="sig-value" id="zscoreValue" style="color:var(--text3)">—</div>
+        <div class="zdrift-track">
+          <div class="zdrift-center"></div>
+          <div class="zdrift-fill" id="zdriftFill" style="width:0%;left:50%;background:var(--big)"></div>
+        </div>
+        <div class="zdrift-labels"><span style="color:var(--big)">← BIG</span><span>0</span><span style="color:var(--sml)">SML →</span></div>
+        <div id="mrTrigger" class="mr-trigger mr-quiet">⊘ No reversion trigger</div>
+      </div>
+
+    </div><!-- /sig-grid -->
+
+    <!-- AI Layer -->
+    <div class="card-label" style="margin-bottom:6px;">🤖 Claude AI Layer (Layer 11)</div>
+    <div class="ai-box">
+      <div id="aiContent">
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono);">Click "Ask Claude AI" after entering 6+ results for AI-powered analysis.</div>
+      </div>
+      <button class="btn btn-sm" onclick="askClaudeAI()" style="margin-top:10px;width:auto;padding:7px 16px;font-size:11px;" id="aiBtn">🤖 Ask Claude AI</button>
+    </div>
+
+    <!-- ENGINE LOG -->
+    <div class="card-label" style="margin-top:14px;margin-bottom:5px;">Engine Log</div>
+    <div id="engineLog">No data processed.</div>
+  </div>
+
+  <!-- ANALYTICS CARD -->
+  <div class="card full">
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('stats',this)">📊 Stats</button>
+      <button class="tab-btn" onclick="switchTab('heatmap',this)">🔥 Heatmap</button>
+      <button class="tab-btn" onclick="switchTab('streak',this)">⚡ Streak</button>
+      <button class="tab-btn" onclick="switchTab('wave',this)">🌊 Wave Signal</button>
+      <button class="tab-btn" onclick="switchTab('rsi',this)">📐 RSI + Cross</button>
+      <button class="tab-btn" onclick="switchTab('session',this)">⏱ 24H Session</button>
+      <button class="tab-btn" onclick="switchTab('timer',this)">⏲ Timer</button>
+    </div>
+
+    <!-- STATS TAB -->
+    <div class="tab-pane active" id="tab-stats">
+      <div class="stat-row" id="statRow">
+        <div class="stat-pill"><div class="stat-val" id="statTotal">0</div><div class="stat-lbl">TOTAL</div></div>
+        <div class="stat-pill"><div class="stat-val" id="statBig" style="color:var(--big)">0</div><div class="stat-lbl">BIG</div></div>
+        <div class="stat-pill"><div class="stat-val" id="statSml" style="color:var(--sml)">0</div><div class="stat-lbl">SMALL</div></div>
+        <div class="stat-pill"><div class="stat-val" id="statPredTotal">0</div><div class="stat-lbl">PREDICTED</div></div>
+        <div class="stat-pill"><div class="stat-val" id="statPredCorrect" style="color:var(--green)">0</div><div class="stat-lbl">CORRECT</div></div>
+        <div class="stat-pill"><div class="stat-val" id="statAccuracy" style="color:var(--yellow)">—</div><div class="stat-lbl">ACCURACY</div></div>
+        <div class="stat-pill"><div class="stat-val" id="statSkipped" style="color:var(--text3)">0</div><div class="stat-lbl">SKIPPED</div></div>
+        <div class="stat-pill"><div class="stat-val" id="statChi2" style="color:var(--accent)">—</div><div class="stat-lbl">χ² SCORE</div></div>
+        <div class="stat-pill"><div class="stat-val" id="statStructure" style="font-size:11px;">—</div><div class="stat-lbl">PATTERN</div></div>
+      </div>
+      <div class="donut-wrap">
+        <svg class="donut-svg" width="70" height="70" viewBox="0 0 70 70">
+          <circle cx="35" cy="35" r="25" fill="none" stroke="var(--surface3)" stroke-width="12"/>
+          <circle id="donutBig" cx="35" cy="35" r="25" fill="none" stroke="var(--big)" stroke-width="12" stroke-dasharray="0 157" stroke-dashoffset="39" style="transition:stroke-dasharray .6s ease;" transform="rotate(-90 35 35)"/>
+          <circle id="donutSml" cx="35" cy="35" r="25" fill="none" stroke="var(--sml)" stroke-width="12" stroke-dasharray="0 157" stroke-dashoffset="39" style="transition:stroke-dasharray .6s ease;" transform="rotate(-90 35 35)"/>
+        </svg>
+        <div class="chart-legend" id="chartLegend" style="font-size:10px;color:var(--text2);">
+          <div>Waiting for data...</div>
+        </div>
+      </div>
+      <!-- Magnetic Center -->
+      <div class="card-label" style="margin-top:14px;margin-bottom:6px;">🧲 Magnetic Center</div>
+      <div class="mag-center" id="magCenter">
+        <div class="mag-val" id="magVal">—</div>
+        <div class="mag-desc" id="magDesc">Upload history to calculate true gravitational center of this game</div>
+      </div>
+    </div>
+
+    <!-- HEATMAP TAB -->
+    <div class="tab-pane" id="tab-heatmap">
+      <div class="card-label" style="margin-bottom:8px;">Number Frequency Heatmap (0–9)</div>
+      <div class="heatmap" id="heatmapGrid"></div>
+    </div>
+
+    <!-- STREAK TAB -->
+    <div class="tab-pane" id="tab-streak">
+      <div class="card-label" style="margin-bottom:6px;">Last 30 Results Streak View</div>
+      <div class="streak-bar" id="streakBar"></div>
+      <div style="margin-top:10px;font-size:10px;font-family:var(--mono);color:var(--text2);" id="streakInfo">—</div>
+    </div>
+
+    <!-- WAVE SIGNAL TAB -->
+    <div class="tab-pane" id="tab-wave">
+      <div class="card-label" style="margin-bottom:6px;">🌊 Sine Wave Signal — Cycle Averages</div>
+      <div class="wave-canvas-wrap">
+        <canvas id="waveCanvas" height="180"></canvas>
+        <div style="font-size:8px;font-family:var(--mono);color:var(--text3);margin-top:6px;text-align:center;">Each dot = average of 10-round cycle · Blue line = signal · Yellow dashed = center (4.5)</div>
+      </div>
+      <div class="wave-stats">
+        <div class="wave-stat"><div class="wave-stat-val" id="wsCycles" style="color:var(--wave)">—</div><div class="wave-stat-lbl">CYCLES</div></div>
+        <div class="wave-stat"><div class="wave-stat-val" id="wsCurrent" style="color:var(--yellow)">—</div><div class="wave-stat-lbl">CURRENT AVG</div></div>
+        <div class="wave-stat"><div class="wave-stat-val" id="wsAmplitude" style="color:var(--orange)">—</div><div class="wave-stat-lbl">AMPLITUDE</div></div>
+        <div class="wave-stat"><div class="wave-stat-val" id="wsTrend" style="color:var(--green)">—</div><div class="wave-stat-lbl">TREND</div></div>
+      </div>
+      <div id="wavePhaseInfo" style="margin:8px 0;"></div>
+      <div id="waveLog" style="font-size:9px;font-family:var(--mono);color:var(--text2);background:var(--bg);padding:8px;border-radius:8px;line-height:1.8;border:1px solid var(--border);max-height:140px;overflow-y:auto;">No wave data yet. Need 20+ rounds.</div>
+    </div>
+
+    <!-- RSI + CROSSOVER TAB -->
+    <div class="tab-pane" id="tab-rsi">
+      <div class="card-label" style="margin-bottom:6px;">📐 RSI Overbought/Oversold Meter</div>
+      <div class="rsi-value" id="rsiValue" style="color:var(--wave)">—</div>
+      <div class="rsi-wrap">
+        <div class="rsi-bar-bg">
+          <div class="rsi-needle" id="rsiNeedle" style="left:50%"></div>
+        </div>
+        <div class="rsi-labels">
+          <span style="color:var(--green)">0 OVERSOLD</span>
+          <span>30</span>
+          <span>50</span>
+          <span>70</span>
+          <span style="color:var(--sml)">100 OVERBOUGHT</span>
+        </div>
+      </div>
+      <div class="rsi-signal" id="rsiSignal">—</div>
+
+      <div class="card-label" style="margin-top:16px;margin-bottom:6px;">🔁 Moving Average Crossover Signal</div>
+      <div class="crossover-box">
+        <div class="wave-canvas-wrap" style="padding:8px;">
+          <canvas id="crossCanvas" height="140"></canvas>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:8px;font-size:9px;font-family:var(--mono);">
+          <span style="color:#22d3a5;">─ Short MA (3 cycles)</span>
+          <span style="color:#fbbf24;">─ Long MA (7 cycles)</span>
+          <span style="color:rgba(255,255,255,0.3);">─ Center (4.5)</span>
+        </div>
+        <div class="crossover-signal" id="crossoverSignal" style="margin-top:8px;color:var(--text3)">Need 10+ cycles for crossover analysis</div>
+      </div>
+    </div>
+
+    <!-- 24H SESSION TAB -->
+    <div class="tab-pane" id="tab-session">
+      <div class="card-label" style="margin-bottom:6px;">⏱ 24-Hour Session Wave Calculator</div>
+      <div class="session-panel">
+        <div class="session-row">
+          <label>24H TOTAL ROUNDS</label>
+          <input type="number" id="sess24h" placeholder="e.g. 1440" style="margin-bottom:0;">
+        </div>
+        <div class="session-row">
+          <label>ROUNDS COMPLETED</label>
+          <input type="number" id="sessCompleted" placeholder="e.g. 720" style="margin-bottom:0;">
+        </div>
+        <div class="session-row">
+          <label>YOUR OBS. AVG</label>
+          <input type="number" id="sessObsAvg" placeholder="e.g. 4.3" step="0.1" style="margin-bottom:0;">
+        </div>
+        <div class="session-row">
+          <label>EXPECTED AVG (leave blank = auto)</label>
+          <input type="number" id="sessExpAvg" placeholder="auto from history" step="0.1" style="margin-bottom:0;">
+        </div>
+        <button class="btn btn-sm" style="margin-top:6px;width:auto;padding:8px 18px;" onclick="calcSession()">⚡ Calculate Session Wave</button>
+        <div class="session-result" id="sessionResult">Fill in the fields above and click Calculate.</div>
+      </div>
+    </div>
+
+    <!-- TIMER TAB -->
+    <div class="tab-pane" id="tab-timer">
+      <div class="card-label" style="margin-bottom:6px;">Round Timer</div>
+      <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:8px;">Set the round interval (seconds) and start countdown</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+        <input type="number" id="timerInterval" placeholder="60" value="60" style="width:80px;margin:0;">
+        <button class="btn btn-sm" style="width:auto;" onclick="startTimer()">▶ Start</button>
+        <button class="btn btn-sm btn-neutral" style="width:auto;" onclick="stopTimer()">⏹ Stop</button>
+      </div>
+      <div class="timer-display" id="timerDisplay">00:00</div>
+      <div class="timer-bar-wrap"><div class="timer-bar" id="timerBar" style="width:100%"></div></div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="card full">
+    <div class="card-label">
+      <span>History Log</span>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span id="histCount" style="color:var(--text3);font-size:9px;font-family:var(--mono);">0 rounds</span>
+        <button class="btn btn-sm btn-green" style="width:auto;padding:4px 10px;font-size:9px;" onclick="exportCSV()">⬇ Export CSV</button>
+      </div>
+    </div>
+    <div class="history-wrap">
+      <table>
+        <thead>
+          <tr><th>Period</th><th>No.</th><th>Type</th><th>Round</th><th>Pos</th><th>#</th><th>Prediction</th><th>✓/✗</th></tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+let rounds = [];
+// Session win tracking
+let sessionPredictions = []; // {predicted, actual, period}
+let lastPrediction = null; // store last prediction for verification
+let predictions = {};
+let lastPeriodId = null;
+let wakeLock = null;
+let soundEnabled = false;
+let timerIntervalId = null;
+let timerSeconds = 0;
+let timerTotal = 60;
+let activeTab = 'stats';
+
+// ═══════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════
+function classify(n) { return parseInt(n) <= 4 ? 'S' : 'B'; }
+
+function incPeriod(p) {
+  try { if (!p || isNaN(p)) return ""; return String(BigInt(p) + 1n); } catch(e) { return ""; }
+}
+
+function getRoundInfo(periodStr) {
+  // Real Wingo 30s format: e.g. 202605211050752
+  // Last 5 digits = SSRRR where SS=series(50 or 52), RRR=round(001-999)
+  // Cycle = every 10 rounds within a series
+  try {
+    const pid = String(periodStr);
+    if (pid.length < 5) return { roundNum: -1, posInRound: -1, series: -1 };
+    const last5 = pid.slice(-5);
+    const series = parseInt(last5.slice(0, 2));   // 50 or 52
+    const roundNum = parseInt(last5.slice(2));     // 001-999
+    if (isNaN(series) || isNaN(roundNum)) return { roundNum: -1, posInRound: -1, series: -1 };
+    // Use series as a multiplier to keep cycles separate between series 50 and 52
+    const seriesOffset = series === 52 ? 10000 : 0;
+    const cycleNum = seriesOffset + Math.floor((roundNum - 1) / 10);
+    const posInRound = (roundNum - 1) % 10;
+    return { roundNum, posInRound, series, cycleNum };
+  } catch(e) { return { roundNum: -1, posInRound: -1, series: -1, cycleNum: -1 }; }
+}
+
+function showToast(msg, duration=2500) {
+  const t = document.getElementById('toast');
+  t.innerText = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function playBeep(freq=520, dur=0.18, type='sine') {
+  if (!soundEnabled) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = type; osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    osc.start(); osc.stop(ctx.currentTime + dur);
+  } catch(e) {}
+}
+
+function playHighConfidenceAlert() {
+  if (!soundEnabled) return;
+  setTimeout(() => playBeep(660, 0.12), 0);
+  setTimeout(() => playBeep(880, 0.2, 'square'), 150);
+}
+
+// ═══════════════════════════════════════════
+//  WAVE ENGINE — CORE CALCULATIONS
+// ═══════════════════════════════════════════
+function getCycleAverages() {
+  // Groups rounds into cycles of 10 within each series (50 and 52 kept separate)
+  const cycleMap = {};
+  rounds.forEach(r => {
+    const info = getRoundInfo(r.period);
+    if (info.cycleNum === undefined || info.cycleNum < 0) return;
+    if (!cycleMap[info.cycleNum]) cycleMap[info.cycleNum] = [];
+    cycleMap[info.cycleNum].push(r.number);
+  });
+
+  const sortedCycles = Object.keys(cycleMap).map(Number).sort((a,b) => a-b);
+  const averages = [];
+  sortedCycles.forEach(cn => {
+    const nums = cycleMap[cn];
+    if (nums.length === 0) return;
+    const avg = nums.reduce((a,b) => a+b, 0) / nums.length;
+    averages.push({ cycleNum: cn, avg: parseFloat(avg.toFixed(3)), count: nums.length });
+  });
+  return averages;
+}
+
+function getWavePhase(avgs) {
+  if (avgs.length < 3) return { phase: 'UNKNOWN', signal: null, description: 'Need 3+ cycles' };
+
+  const recent = avgs.slice(-3).map(a => a.avg);
+  const [a, b, c] = recent;
+
+  // Rising: each successive avg is higher
+  if (c > b && b > a) return { phase: 'RISING', signal: 'B', description: '↗ Wave rising — BIG pressure building', color: 'var(--big)' };
+  // Peak: middle is highest
+  if (b > a && b > c) return { phase: 'PEAK', signal: 'S', description: '⚠ Wave at peak — SMALL reversal expected', color: 'var(--yellow)' };
+  // Falling: each successive avg is lower
+  if (c < b && b < a) return { phase: 'FALLING', signal: 'S', description: '↘ Wave falling — SMALL pressure building', color: 'var(--sml)' };
+  // Trough: middle is lowest
+  if (b < a && b < c) return { phase: 'TROUGH', signal: 'B', description: '⚠ Wave at trough — BIG bounce expected', color: 'var(--green)' };
+  // Gentle rise
+  if (c > a) return { phase: 'RISING', signal: 'B', description: '↗ Gentle uptrend — BIG leaning', color: 'var(--big)' };
+  // Gentle fall
+  if (c < a) return { phase: 'FALLING', signal: 'S', description: '↘ Gentle downtrend — SMALL leaning', color: 'var(--sml)' };
+
+  return { phase: 'FLAT', signal: null, description: '— Flat wave — no clear signal', color: 'var(--text3)' };
+}
+
+function getWaveAmplitude(avgs) {
+  if (avgs.length < 3) return 0;
+  const vals = avgs.map(a => a.avg);
+  return parseFloat((Math.max(...vals) - Math.min(...vals)).toFixed(3));
+}
+
+function getMagneticCenter(avgs) {
+  if (avgs.length === 0) return 4.5;
+  return parseFloat((avgs.reduce((s,a) => s+a.avg, 0) / avgs.length).toFixed(3));
+}
+
+// ═══════════════════════════════════════════
+//  LAYER 9: WAVE SIGNAL
+// ═══════════════════════════════════════════
+function layer9_waveSignal() {
+  if (rounds.length < 20) return null;
+
+  const avgs = getCycleAverages();
+  if (avgs.length < 2) return { vote: null, confidence: 0, phase: 'UNKNOWN', reason: 'Need 2+ full cycles' };
+
+  const phase = getWavePhase(avgs);
+  const amplitude = getWaveAmplitude(avgs);
+  const magCenter = getMagneticCenter(avgs);
+
+  // Amplitude-based confidence: high amplitude = volatile = lower confidence
+  // Low amplitude = smooth trend = higher confidence
+  const ampConf = amplitude > 3 ? 0.60 : amplitude > 2 ? 0.65 : amplitude > 1 ? 0.72 : 0.78;
+
+  if (!phase.signal) return { vote: null, confidence: 0, phase: phase.phase, amplitude, magCenter, reason: 'Flat wave' };
+
+  return {
+    vote: phase.signal,
+    confidence: ampConf,
+    phase: phase.phase,
+    phaseDesc: phase.description,
+    phaseColor: phase.color,
+    amplitude,
+    magCenter,
+    reason: `Phase:${phase.phase} Amp:${amplitude} MagCenter:${magCenter}`
+  };
+}
+
+// ═══════════════════════════════════════════
+//  RSI CALCULATION (wave-based)
+// ═══════════════════════════════════════════
+function calcRSI(avgs, period=7) {
+  if (avgs.length < period+1) return null;
+  const vals = avgs.map(a => a.avg);
+  let gains=0, losses=0;
+
+  for (let i=1; i<=period; i++) {
+    const diff = vals[vals.length-period-1+i] - vals[vals.length-period-2+i];
+    if (diff > 0) gains += diff;
+    else losses += Math.abs(diff);
+  }
+
+  if (losses === 0) return 100;
+  const rs = (gains/period) / (losses/period);
+  return parseFloat((100 - (100/(1+rs))).toFixed(1));
+}
+
+// ═══════════════════════════════════════════
+//  MOVING AVERAGE CROSSOVER
+// ═══════════════════════════════════════════
+function calcCrossover(avgs) {
+  if (avgs.length < 7) return null;
+  const vals = avgs.map(a => a.avg);
+
+  const shortMA = (n) => {
+    const slice = vals.slice(-n);
+    return slice.reduce((a,b) => a+b, 0) / slice.length;
+  };
+  const longMA = (n) => {
+    const slice = vals.slice(-n);
+    return slice.reduce((a,b) => a+b, 0) / slice.length;
+  };
+
+  const short = parseFloat(shortMA(3).toFixed(3));
+  const long_ = parseFloat(longMA(7).toFixed(3));
+
+  // Previous crossover position
+  const prevShort = avgs.length >= 4 ? parseFloat(vals.slice(-4,-1).reduce((a,b)=>a+b,0)/3) : short;
+  const prevLong  = avgs.length >= 8 ? parseFloat(vals.slice(-8,-1).reduce((a,b)=>a+b,0)/7) : long_;
+
+  const currentAbove = short > long_;
+  const prevAbove = prevShort > prevLong;
+
+  let crossType = null;
+  if (!prevAbove && currentAbove) crossType = 'GOLDEN'; // bullish crossover
+  if (prevAbove && !currentAbove) crossType = 'DEATH';  // bearish crossover
+
+  return {
+    short, long: long_,
+    crossType,
+    signal: currentAbove ? 'B' : 'S',
+    strength: parseFloat(Math.abs(short - long_).toFixed(3))
+  };
+}
+
+// ═══════════════════════════════════════════
+//  LAYER 10: RSI + CROSSOVER COMBINED
+// ═══════════════════════════════════════════
+function layer10_rsiCrossover() {
+  const avgs = getCycleAverages();
+  if (avgs.length < 5) return null;
+
+  const rsi = calcRSI(avgs);
+  const cross = calcCrossover(avgs);
+
+  let vote = null, confidence = 0, reason = '';
+
+  // RSI signal
+  let rsiVote = null;
+  if (rsi !== null) {
+    if (rsi < 30) { rsiVote = 'B'; } // oversold → BIG due
+    else if (rsi > 70) { rsiVote = 'S'; } // overbought → SMALL due
+  }
+
+  // Crossover signal
+  let crossVote = cross ? cross.signal : null;
+
+  if (rsiVote && crossVote && rsiVote === crossVote) {
+    vote = rsiVote; confidence = 0.78;
+    reason = `RSI:${rsi} + Cross AGREE → ${vote}`;
+  } else if (rsiVote) {
+    vote = rsiVote;
+    confidence = rsi < 20 || rsi > 80 ? 0.74 : 0.62;
+    reason = `RSI:${rsi} ${rsi<30?'OVERSOLD→BIG':'OVERBOUGHT→SML'}`;
+  } else if (crossVote) {
+    vote = crossVote;
+    confidence = cross.crossType ? 0.70 : 0.58;
+    reason = `MA Cross: ${cross.short.toFixed(2)} vs ${cross.long.toFixed(2)} → ${cross.crossType||'trend'}`;
+  }
+
+  return { vote, confidence, rsi, cross, rsiVote, crossVote, reason };
+}
+
+// ═══════════════════════════════════════════
+//  LAYERS 1–8 (unchanged from v4.1)
+// ═══════════════════════════════════════════
+function layer1_exactMatch() {
+  // IMPROVED v8: Raised MIN_CONF to 0.72 and MIN_MATCHES to 8.
+  // Analysis of 16,712 rounds showed that patterns with 60% historical confidence
+  // only achieve ~41.5% forward accuracy (worse than random!). This is overfitting.
+  // Higher thresholds + requiring more matches reduces false signals dramatically.
+  if (rounds.length < 10) return null;
+  const MIN_CONF = 0.72;
+  const MIN_MATCHES = 8; // require real statistical support, not just 1-2 lucky hits
+  function searchExact(pattern, depth) {
+    if (rounds.length < depth + 1) return { bCount:0, sCount:0, total:0 };
+    let bCount=0, sCount=0;
+    const patStr = pattern.join(',');
+    // Only use last 2000 rounds to keep patterns fresh/relevant
+    const searchWindow = rounds.slice(-Math.min(rounds.length, 2000));
+    for (let i=0; i<=searchWindow.length-(depth+1); i++) {
+      if (searchWindow.slice(i,i+depth).map(r=>r.number).join(',') === patStr) {
+        searchWindow[i+depth].type === 'B' ? bCount++ : sCount++;
+      }
+    }
+    return { bCount, sCount, total: bCount+sCount };
+  }
+  let best=null, usedDepth=0, bestConf=0;
+  [6,5,4,3].forEach(d => {
+    const pat = rounds.slice(-d).map(r=>r.number);
+    const res = searchExact(pat, d);
+    if (res.total < MIN_MATCHES) return; // not enough evidence
+    const wr = Math.max(res.bCount,res.sCount)/res.total;
+    if (wr>=MIN_CONF && wr>=bestConf) { best=res; usedDepth=d; bestConf=wr; }
+  });
+  const fb = rounds.slice(-4).map(r=>r.number);
+  if (!best) return { vote:null, confidence:0, depth:0, bCount:0, sCount:0, totalMatches:0, pattern:fb };
+  return { vote: best.bCount>=best.sCount?'B':'S', confidence:bestConf, depth:usedDepth,
+    bCount:best.bCount, sCount:best.sCount, totalMatches:best.total,
+    pattern:rounds.slice(-usedDepth).map(r=>r.number) };
+}
+
+function layer2_sizePattern() {
+  // IMPROVED v8: Raised MIN_CONF to 0.70, MIN_MATCHES to 15, fresh window only.
+  if (rounds.length < 8) return null;
+  const MIN_CONF = 0.70;
+  const MIN_MATCHES = 15;
+  function searchSize(pattern, depth) {
+    if (rounds.length < depth+1) return { bCount:0, sCount:0, total:0 };
+    let bCount=0, sCount=0;
+    const patStr = pattern.join('');
+    const searchWindow = rounds.slice(-Math.min(rounds.length, 2000));
+    for (let i=0; i<=searchWindow.length-(depth+1); i++) {
+      if (searchWindow.slice(i,i+depth).map(r=>r.type).join('') === patStr) {
+        searchWindow[i+depth].type === 'B' ? bCount++ : sCount++;
+      }
+    }
+    return { bCount, sCount, total: bCount+sCount };
+  }
+  let best=null, usedDepth=0, bestConf=0;
+  [6,5,4,3].forEach(d => {
+    const pat = rounds.slice(-d).map(r=>r.type);
+    const res = searchSize(pat, d);
+    if (res.total < MIN_MATCHES) return;
+    const wr = Math.max(res.bCount,res.sCount)/res.total;
+    if (wr>=MIN_CONF && wr>=bestConf) { best=res; usedDepth=d; bestConf=wr; }
+  });
+  if (!best) return { vote:null, confidence:0, depth:0, bCount:0, sCount:0, totalMatches:0 };
+  return { vote: best.bCount>=best.sCount?'B':'S', confidence:bestConf, depth:usedDepth,
+    bCount:best.bCount, sCount:best.sCount, totalMatches:best.total,
+    pattern:rounds.slice(-usedDepth).map(r=>r.type) };
+}
+
+function layer3_roundAware() {
+  // FIXED v9: Uses real Wingo period structure (series 50/52, rounds 001-999)
+  // Compares current position within a series against same position in past series
+  if (rounds.length < 11) return null;
+  const currentInfo = getRoundInfo(rounds[rounds.length-1].period);
+  if (!currentInfo || currentInfo.roundNum < 0) return null;
+
+  const currentSeries = currentInfo.series;
+  const currentPos = currentInfo.roundNum; // position within current series
+
+  // Build map: series -> array of rounds in order
+  const seriesMap = {};
+  rounds.forEach(r => {
+    const info = getRoundInfo(r.period);
+    if (!info || info.series < 0) return;
+    const key = `${info.series}_${Math.floor(r.period / 1000)}`; // unique per series instance
+    if (!seriesMap[key]) seriesMap[key] = {};
+    seriesMap[key][info.roundNum] = r;
+  });
+
+  // Current series key
+  const currentKey = `${currentSeries}_${Math.floor(rounds[rounds.length-1].period / 1000)}`;
+
+  // Look at last 3 rounds in current series as pattern
+  const currentSeriesRounds = seriesMap[currentKey] || {};
+  const patternPositions = [currentPos-2, currentPos-1, currentPos].filter(p => p > 0);
+  if (patternPositions.length < 3) return { vote:null, confidence:0, roundsAnalyzed:0, bCount:0, sCount:0 };
+
+  const curPattern = patternPositions.map(p => currentSeriesRounds[p] ? currentSeriesRounds[p].type : null).join('');
+  if (curPattern.includes('null')) return { vote:null, confidence:0, roundsAnalyzed:0, bCount:0, sCount:0 };
+
+  // Find same pattern in past series of same type (50 matches 50, 52 matches 52)
+  let bCount=0, sCount=0, roundsAnalyzed=0;
+  Object.keys(seriesMap).forEach(key => {
+    if (key === currentKey) return;
+    const [seriesNum] = key.split('_');
+    if (parseInt(seriesNum) !== currentSeries) return; // same series type only
+    const sr = seriesMap[key];
+    const matchPat = patternPositions.map(p => sr[p] ? sr[p].type : null).join('');
+    if (matchPat.includes('null') || matchPat !== curPattern) return;
+    const nextRound = sr[currentPos + 1];
+    if (!nextRound) return;
+    roundsAnalyzed++;
+    nextRound.type === 'B' ? bCount++ : sCount++;
+  });
+
+  if (bCount+sCount === 0) return { vote:null, confidence:0, roundsAnalyzed:0, bCount:0, sCount:0 };
+  const vote = bCount >= sCount ? 'B' : 'S';
+  return { vote, confidence: Math.max(bCount,sCount)/(bCount+sCount), roundsAnalyzed, bCount, sCount };
+}
+
+function layer4_streakDetector() {
+  // IMPROVED v8: Raised streak threshold to 5+.
+  // Data analysis of 16,712 rounds shows streak-break rate at 4: only 48.6% (below random!).
+  // At 5+: 50.4% — still marginal. Only fire at 5+ AND require historical break confirmation.
+  if (rounds.length < 5) return null;
+  const last = rounds.slice(-10);
+  let streakLen = 1;
+  const latestType = last[last.length-1].type;
+  for (let i=last.length-2; i>=0; i--) {
+    if (last[i].type === latestType) streakLen++;
+    else break;
+  }
+  if (streakLen >= 5) {
+    const breakVote = latestType === 'B' ? 'S' : 'B';
+    let breakCount=0, continueCount=0;
+    for (let i=0; i<=rounds.length-(streakLen+1); i++) {
+      let sameLen=1;
+      const t = rounds[i+streakLen-1].type;
+      for (let j=i+streakLen-2; j>=i; j--) {
+        if (rounds[j].type===t) sameLen++;
+        else break;
+      }
+      if (sameLen===streakLen && rounds[i+streakLen]) {
+        rounds[i+streakLen].type!==t ? breakCount++ : continueCount++;
+      }
+    }
+    const total = breakCount+continueCount;
+    if (total > 0) {
+      const conf = breakCount/total;
+      if (conf >= 0.60) return { vote: breakVote, confidence: conf, streakLen, streakType:'HOT', bCount:breakCount, sCount:continueCount };
+    }
+    const defaultConf = Math.min(0.68, 0.50 + (streakLen-4)*0.04); // more conservative
+    return { vote: breakVote, confidence: defaultConf, streakLen, streakType:'HOT', bCount:0, sCount:0 };
+  }
+  if (last.length >= 5) {
+    let altLen = 1;
+    for (let i=last.length-2; i>=0; i--) {
+      if (last[i].type !== last[i+1].type) altLen++;
+      else break;
+    }
+    if (altLen >= 5) {
+      const nextAlt = last[last.length-1].type === 'B' ? 'S' : 'B';
+      return { vote: nextAlt, confidence: 0.68, streakLen: altLen, streakType:'ALT', bCount:0, sCount:0 };
+    }
+  }
+  return { vote: null, confidence: 0, streakLen, streakType:'NORMAL', bCount:0, sCount:0 };
+}
+
+function layer5_weightedRecency() {
+  if (rounds.length < 10) return null;
+  let bScore=0, sScore=0;
+  rounds.forEach((r, i) => {
+    const age = rounds.length - 1 - i;
+    let weight = 1;
+    if (age < 20) weight = 3;
+    else if (age < 50) weight = 1.5;
+    if (r.type === 'B') bScore += weight;
+    else sScore += weight;
+  });
+  const total = bScore + sScore;
+  const direction = bScore >= sScore ? 'B' : 'S';
+  const conf = Math.max(bScore,sScore)/total;
+  if (conf < 0.55) return { vote:null, confidence:conf, bScore, sScore };
+  return { vote: direction, confidence: conf, bScore, sScore };
+}
+
+function layer6_markovChain() {
+  if (rounds.length < 20) return null;
+  const MIN_CONF = 0.60;
+  const t1 = { BB:0, BS:0, SB:0, SS:0 };
+  for (let i=0; i<rounds.length-1; i++) {
+    const key = rounds[i].type + rounds[i+1].type;
+    if (t1[key] !== undefined) t1[key]++;
+  }
+  const prev1 = rounds[rounds.length-1].type;
+  const b1 = prev1==='B' ? t1.BB : t1.SB;
+  const s1 = prev1==='B' ? t1.BS : t1.SS;
+  const tot1 = b1+s1;
+  let order1 = null;
+  if (tot1 > 0) {
+    const conf1 = Math.max(b1,s1)/tot1;
+    if (conf1 >= MIN_CONF) order1 = { vote: b1>=s1?'B':'S', confidence:conf1, bCount:b1, sCount:s1, order:1 };
+  }
+  if (rounds.length >= 30) {
+    const t2 = {};
+    for (let i=0; i<rounds.length-2; i++) {
+      const state = rounds[i].type + rounds[i+1].type;
+      const next = rounds[i+2].type;
+      if (!t2[state]) t2[state] = { B:0, S:0 };
+      t2[state][next]++;
+    }
+    const prev2 = rounds[rounds.length-2].type + rounds[rounds.length-1].type;
+    if (t2[prev2]) {
+      const b2=t2[prev2].B, s2=t2[prev2].S, tot2=b2+s2;
+      if (tot2 > 0) {
+        const conf2 = Math.max(b2,s2)/tot2;
+        if (conf2 >= MIN_CONF && conf2 >= (order1?order1.confidence:0)) {
+          return { vote: b2>=s2?'B':'S', confidence:conf2, bCount:b2, sCount:s2, order:2, state:prev2 };
+        }
+      }
+    }
+  }
+  if (order1) return { ...order1, state: prev1 };
+  return { vote:null, confidence:0, bCount:0, sCount:0, order:0, state:prev1 };
+}
+
+function layer7_chiSquare() {
+  if (rounds.length < 30) return null;
+  const n = rounds.length;
+  const bigC = rounds.filter(r=>r.type==='B').length;
+  const smlC = n - bigC;
+  const expected = n / 2;
+  const chi2 = Math.pow(bigC-expected,2)/expected + Math.pow(smlC-expected,2)/expected;
+  const hasStructure = chi2 > 3.841;
+  const structureStrength = Math.min(1.0, chi2 / 15);
+  let bb=0,bs=0,sb=0,ss=0;
+  for (let i=0;i<rounds.length-1;i++) {
+    const a=rounds[i].type, b=rounds[i+1].type;
+    if(a==='B'&&b==='B')bb++; else if(a==='B'&&b==='S')bs++;
+    else if(a==='S'&&b==='B')sb++; else ss++;
+  }
+  const transTotal=bb+bs+sb+ss;
+  const expTrans=transTotal/4;
+  const transChi2 = transTotal>0 ? [bb,bs,sb,ss].reduce((acc,v)=>acc+Math.pow(v-expTrans,2)/expTrans,0) : 0;
+  const transStructure = transChi2 > 7.815;
+  let vote = null, confidence = 0;
+  if (hasStructure || transStructure) {
+    const nextFromB = bb > bs ? 'B' : 'S';
+    const nextFromS = sb > ss ? 'B' : 'S';
+    const lastType = rounds[rounds.length-1].type;
+    const transVote = lastType==='B' ? nextFromB : nextFromS;
+    const transConf = lastType==='B' ? Math.max(bb,bs)/(bb+bs||1) : Math.max(sb,ss)/(sb+ss||1);
+    if (transConf >= 0.58) {
+      vote = transVote;
+      confidence = Math.min(0.85, 0.50 + structureStrength * 0.35 + (transConf-0.5)*0.5);
+    }
+  }
+  return { vote, confidence, chi2: chi2.toFixed(2), transChi2: transChi2.toFixed(2),
+    hasStructure, transStructure, bigC, smlC, bCount: bigC, sCount: smlC };
+}
+
+function layer8_meanReversion() {
+  if (rounds.length < 20) return null;
+  const MIN_DEVIATION = 0.12;
+  function windowStats(n) {
+    const w = rounds.slice(-n);
+    const b = w.filter(r=>r.type==='B').length;
+    const s = w.length - b;
+    const ratio = b/w.length;
+    const deviation = Math.abs(ratio - 0.5);
+    return { b, s, ratio, deviation, n:w.length };
+  }
+  const w10 = windowStats(10);
+  const w20 = windowStats(20);
+  const w30 = rounds.length >= 30 ? windowStats(30) : null;
+  let totalDevB=0, totalDevS=0, totalWeight=0;
+  const windows = [
+    { stats:w10, weight:3 }, { stats:w20, weight:2 },
+    ...(w30 ? [{ stats:w30, weight:1 }] : [])
+  ];
+  windows.forEach(({ stats, weight }) => {
+    if (stats.deviation >= MIN_DEVIATION) {
+      const favors = stats.ratio > 0.5 ? 'S' : 'B';
+      const strength = stats.deviation * weight;
+      favors==='B' ? totalDevB+=strength : totalDevS+=strength;
+      totalWeight += weight;
+    }
+  });
+  if (totalWeight === 0) return { vote:null, confidence:0, w10, w20, w30, reason:'No significant deviation' };
+  const dominant = totalDevB >= totalDevS ? 'B' : 'S';
+  const avgDev = (w10.deviation*3 + w20.deviation*2 + (w30?w30.deviation:w20.deviation)*1) / (w30?6:5);
+  const confidence = Math.min(0.82, 0.50 + avgDev * 1.8);
+  if (confidence < 0.56) return { vote:null, confidence, w10, w20, w30, reason:'Deviation too small' };
+  return { vote: dominant, confidence, bCount: w20.b, sCount: w20.s, w10, w20, w30,
+    reason: `${dominant==='B'?'SMALL':'BIG'} overrepresented → ${dominant==='B'?'BIG':'SMALL'} due` };
+}
+
+// ═══════════════════════════════════════════
+//  LAYER ACCURACY TRACKER (adaptive memory)
+// ═══════════════════════════════════════════
+// Stores per-layer prediction history: layerAccHistory[layerIdx] = [{vote, actual}]
+let layerAccHistory = Array.from({length:10}, () => []);
+
+function recordLayerVotes(layers, actualType) {
+  layers.forEach((l, i) => {
+    if (l && l.vote) {
+      layerAccHistory[i].push({ vote: l.vote, actual: actualType });
+      // Rolling window: keep last 30
+      if (layerAccHistory[i].length > 30) layerAccHistory[i].shift();
+    }
+  });
+}
+
+function getLayerRecentAcc(layerIdx) {
+  const hist = layerAccHistory[layerIdx];
+  if (hist.length < 5) return null; // not enough data
+  const correct = hist.filter(h => h.vote === h.actual).length;
+  return correct / hist.length;
+}
+
+function getAdaptiveWeight(baseWeight, layerIdx) {
+  const acc = getLayerRecentAcc(layerIdx);
+  if (acc === null) return baseWeight; // not enough history, use base
+  // acc > 0.60 → reward, acc < 0.45 → penalize heavily
+  if (acc >= 0.70) return baseWeight * 1.5;
+  if (acc >= 0.60) return baseWeight * 1.2;
+  if (acc >= 0.50) return baseWeight * 1.0;
+  if (acc >= 0.45) return baseWeight * 0.6;
+  return baseWeight * 0.2; // this layer is worse than random, nearly mute it
+}
+
+// ═══════════════════════════════════════════
+//  SIGNAL INTELLIGENCE — AUTOCORRELATION
+// ═══════════════════════════════════════════
+function calcAutocorrelation(maxLag = 8) {
+  if (rounds.length < maxLag + 5) return null;
+  // Use binary: B=1, S=0
+  const series = rounds.map(r => r.type === 'B' ? 1 : 0);
+  const n = series.length;
+  const mean = series.reduce((a, b) => a + b, 0) / n;
+  const variance = series.reduce((a, v) => a + Math.pow(v - mean, 2), 0) / n;
+  if (variance === 0) return null;
+  const acf = [];
+  for (let lag = 1; lag <= maxLag; lag++) {
+    let cov = 0;
+    for (let i = 0; i < n - lag; i++) {
+      cov += (series[i] - mean) * (series[i + lag] - mean);
+    }
+    acf.push(parseFloat((cov / ((n - lag) * variance)).toFixed(4)));
+  }
+  // Significance threshold ≈ 1.96/√n (95% CI)
+  const sigThreshold = 1.96 / Math.sqrt(n);
+  const sigCount = acf.filter(v => Math.abs(v) > sigThreshold).length;
+  return { acf, sigThreshold, sigCount, hasMemory: sigCount >= 2 };
+}
+
+// ═══════════════════════════════════════════
+//  SIGNAL INTELLIGENCE — ENTROPY WINDOW
+// ═══════════════════════════════════════════
+function calcEntropy(windowSize = 30) {
+  if (rounds.length < 10) return null;
+  const w = rounds.slice(-Math.min(windowSize, rounds.length));
+  const n = w.length;
+  // Shannon entropy on B/S symbol pairs (bigrams)
+  const bigrams = {};
+  for (let i = 0; i < n - 1; i++) {
+    const key = w[i].type + w[i + 1].type;
+    bigrams[key] = (bigrams[key] || 0) + 1;
+  }
+  const total = n - 1;
+  let H = 0;
+  Object.values(bigrams).forEach(count => {
+    const p = count / total;
+    H -= p * Math.log2(p);
+  });
+  // Max entropy for 4 bigrams = 2 bits
+  const maxH = 2;
+  const normalised = parseFloat((H / maxH).toFixed(4));
+  // Zone classification
+  let zone, zoneClass;
+  if (normalised < 0.70) { zone = 'HOT ZONE'; zoneClass = 'sig-hot'; }
+  else if (normalised < 0.88) { zone = 'WARM'; zoneClass = 'sig-structure'; }
+  else { zone = 'NOISE ZONE'; zoneClass = 'sig-noise'; }
+  return { H: parseFloat(H.toFixed(3)), normalised, zone, zoneClass };
+}
+
+// ═══════════════════════════════════════════
+//  SIGNAL INTELLIGENCE — RUN-LENGTH DEVIATION
+// ═══════════════════════════════════════════
+function calcRunLengthDeviation() {
+  if (rounds.length < 20) return null;
+  // Compute actual run lengths per type
+  function getRuns(type) {
+    const runs = [];
+    let run = 0;
+    rounds.forEach((r, i) => {
+      if (r.type === type) {
+        run++;
+      } else if (run > 0) {
+        runs.push(run);
+        run = 0;
+      }
+    });
+    if (run > 0) runs.push(run);
+    return runs;
+  }
+  const bRuns = getRuns('B');
+  const sRuns = getRuns('S');
+  // For fair coin: geometric mean run = 1/(1-p) ≈ 2
+  // Expected mean run length ≈ 2 for p=0.5
+  const expMean = 2.0;
+  function runStats(runs) {
+    if (runs.length === 0) return { mean: 0, dev: 0, score: 0 };
+    const mean = runs.reduce((a, b) => a + b, 0) / runs.length;
+    const dev = mean - expMean;
+    // Normalise score: abs(dev)/expMean, capped 0-1
+    const score = Math.min(1, Math.abs(dev) / expMean);
+    return { mean: parseFloat(mean.toFixed(2)), dev: parseFloat(dev.toFixed(2)), score };
+  }
+  const bStats = runStats(bRuns);
+  const sStats = runStats(sRuns);
+  // Overall deviation — higher = runs are abnormally long/short
+  const overallDev = (bStats.score + sStats.score) / 2;
+  let label, cls;
+  if (overallDev > 0.35) { label = 'HIGH DEV'; cls = 'sig-hot'; }
+  else if (overallDev > 0.15) { label = 'MODERATE'; cls = 'sig-structure'; }
+  else { label = 'NORMAL'; cls = 'sig-cold'; }
+  return { bStats, sStats, overallDev: parseFloat(overallDev.toFixed(3)), label, cls };
+}
+
+// ═══════════════════════════════════════════
+//  SIGNAL INTELLIGENCE — Z-SCORE DRIFT
+// ═══════════════════════════════════════════
+function calcZScoreDrift(windowSize = 50) {
+  if (rounds.length < 15) return null;
+  const w = rounds.slice(-Math.min(windowSize, rounds.length));
+  const n = w.length;
+  const bigCount = w.filter(r => r.type === 'B').length;
+  const p = bigCount / n;
+  // Z-score vs expected 0.5
+  const z = (p - 0.5) / Math.sqrt(0.25 / n);
+  // Mean reversion trigger: |z| >= 2.0 (≈ 5% significance)
+  const trigger = Math.abs(z) >= 2.0;
+  const triggerStrong = Math.abs(z) >= 2.5;
+  // Direction: positive z = BIG heavy → SMALL due
+  const reversionSide = z > 0 ? 'S' : 'B';
+  let label, cls;
+  if (Math.abs(z) >= 2.5) { label = `Z=${z.toFixed(2)} STRONG`; cls = 'sig-hot'; }
+  else if (Math.abs(z) >= 2.0) { label = `Z=${z.toFixed(2)} TRIGGER`; cls = 'sig-structure'; }
+  else if (Math.abs(z) >= 1.0) { label = `Z=${z.toFixed(2)} LEAN`; cls = 'sig-cold'; }
+  else { label = `Z=${z.toFixed(2)} BALANCED`; cls = 'sig-cold'; }
+  return { z: parseFloat(z.toFixed(3)), p, n, trigger, triggerStrong, reversionSide, label, cls, bigCount, smlCount: n - bigCount };
+}
+
+// ═══════════════════════════════════════════
+//  CHAMPION SIGNAL SYSTEM — CORE ENGINE v7
+//  Replaces the old "average everything" approach.
+//  Steps:
+//   1. Score each layer by: base weight × adaptive multiplier × confidence × recency
+//   2. Rank all active layers
+//   3. Take top-3 champions — if they agree → HIGH conviction
+//   4. Gate: if top champion is cold/weak → SKIP
+//   5. Signal intelligence modifiers applied on top
+// ═══════════════════════════════════════════
+function championConsolidate(l1,l2,l3,l4,l5,l6,l7,l8,l9,l10) {
+  const BASE_W = [3.0, 2.5, 2.0, 1.5, 1.2, 2.5, 1.5, 1.5, 2.0, 1.8];
+  const LAYER_NAMES = ['Exact','SizePat','RoundAware','Streak','Recency','Markov','Chi²','MeanRev','Wave','RSI/Cross'];
+  const layers = [l1,l2,l3,l4,l5,l6,l7,l8,l9,l10];
+
+  // ── Step 1: Score each layer ──
+  const scored = [];
+  layers.forEach((l, i) => {
+    if (!l || !l.vote) return;
+    const adaptW = getAdaptiveWeight(BASE_W[i], i);
+    const rawScore = adaptW * l.confidence;
+    const acc = getLayerRecentAcc(i);
+    scored.push({
+      idx: i, name: LAYER_NAMES[i],
+      vote: l.vote, confidence: l.confidence,
+      baseW: BASE_W[i], adaptW,
+      rawScore, acc,
+      // Effective score includes recency-weighted accuracy bonus
+      effectiveScore: rawScore * (acc !== null ? (0.5 + acc) : 1.0)
+    });
+  });
+
+  if (scored.length === 0) return null;
+
+  // ── Step 2: Rank by effectiveScore ──
+  scored.sort((a, b) => b.effectiveScore - a.effectiveScore);
+
+  // ── Step 3: Top-3 champions ──
+  const top3 = scored.slice(0, Math.min(3, scored.length));
+  const top3Agree = top3.every(c => c.vote === top3[0].vote);
+  const champVote = top3[0].vote;
+
+  // Count agreement among ALL active layers
+  const totalActive = scored.length;
+  const agreeAll = scored.filter(s => s.vote === champVote).length;
+  const disagreeAll = totalActive - agreeAll;
+  const consensusRatio = agreeAll / totalActive;
+
+  // Margin from scores
+  const bScore = scored.filter(s=>s.vote==='B').reduce((a,s)=>a+s.effectiveScore,0);
+  const sScore = scored.filter(s=>s.vote==='S').reduce((a,s)=>a+s.effectiveScore,0);
+  const totalScore = bScore + sScore;
+  const rawConf = Math.max(bScore,sScore) / totalScore;
+  const marginPct = (rawConf - 0.5) * 200;
+
+  // ── Signal Intelligence modifiers ──
+  const entropy = calcEntropy();
+  const zdrift = calcZScoreDrift();
+  const rld = calcRunLengthDeviation();
+
+  // ── Signal Intelligence modifiers ──
+  // NOTE v9: Entropy and RLD penalties REMOVED.
+  // This game is always high-entropy (~50/50 random) so entropy modifier
+  // was permanently discounting EVERY round causing 60-80 round skip streaks.
+  // Only Z-drift BOOST is kept (when drift agrees with prediction direction).
+  const entropy = calcEntropy();
+  const zdrift = calcZScoreDrift();
+  const rld = calcRunLengthDeviation();
+
+  // Entropy: only boost when structured, never penalise (game is always noisy)
+  let entropyMod = 1.0;
+  if (entropy && entropy.normalised < 0.75) entropyMod = 1.10; // rare structured window → boost
+
+  // Z-score: only boost when drift AGREES with direction, no penalty
+  let zMod = 1.0;
+  if (zdrift && zdrift.trigger && zdrift.reversionSide === champVote) zMod = 1.12;
+
+  // RLD: removed penalty entirely
+  let rldMod = 1.0;
+
+  const finalConviction = Math.min(100, marginPct * entropyMod * zMod * rldMod);
+
+  // ── Step 4: Gate logic ── (v9: balanced — not too strict, not too loose)
+  // Gate 1: at least one layer must have a meaningful score
+  if (top3[0].effectiveScore < 0.8) {
+    return { skip: true, skipReason: 'No active layer has enough signal strength', champVote, bScore, sScore, scored, consensusRatio, marginPct: 0, finalConviction: 0 };
+  }
+  // Gate 2: top-3 must have at least 2/3 agreeing
+  if (top3.length >= 3 && !top3Agree) {
+    const top3AgreeCount = top3.filter(c => c.vote === champVote).length;
+    if (top3AgreeCount < 2) {
+      return { skip: true, skipReason: `Top layers split (${top3.map(c=>c.vote).join('/')}) — no clear leader`, champVote, bScore, sScore, scored, consensusRatio, marginPct, finalConviction: 0 };
+    }
+  }
+  // Gate 3: conviction must clear a low bar (just needs some signal)
+  if (finalConviction < 6) {
+    return { skip: true, skipReason: `Conviction too low (${finalConviction.toFixed(0)}%) — signals cancel each other out`, champVote, bScore, sScore, scored, consensusRatio, marginPct, finalConviction };
+  }
+  // Gate 4: simple majority consensus (>50%) across all active layers
+  if (consensusRatio <= 0.50) {
+    return { skip: true, skipReason: `Layers split 50/50 — no majority direction`, champVote, bScore, sScore, scored, consensusRatio, marginPct, finalConviction };
+  }
+
+  // ── Tier ──
+  let tier;
+  const top3AllAgree = top3.length >= 2 && top3.filter(c=>c.vote===champVote).length >= 2;
+  if (top3Agree && top3.length === 3 && finalConviction >= 25 && consensusRatio >= 0.65) {
+    tier = 'HIGH';
+  } else if (top3AllAgree && finalConviction >= 10 && consensusRatio >= 0.55) {
+    tier = 'MEDIUM';
+  } else {
+    tier = 'LOW';
+  }
+
+  return {
+    skip: false,
+    direction: champVote, tier,
+    confidence: Math.min(99, Math.round(finalConviction)),
+    bScore, sScore, scored, top3,
+    consensusRatio, marginPct, finalConviction,
+    agreeVotes: agreeAll, totalVotes: totalActive,
+    activeVotes: scored, // keep for legacy compat
+    entropyMod, zMod, rldMod
+  };
+}
+
+// ═══════════════════════════════════════════
+//  SMART CONSOLIDATE v6 (kept for fallback, 
+//  but v7 uses championConsolidate above)
+// ═══════════════════════════════════════════
+function consolidate(l1,l2,l3,l4,l5,l6,l7,l8,l9,l10) {
+  const BASE_W = [3.0, 2.5, 2.0, 1.5, 1.2, 2.5, 1.5, 1.5, 2.0, 1.8];
+  const layers = [l1,l2,l3,l4,l5,l6,l7,l8,l9,l10];
+
+  const chiBoost = (l7 && l7.hasStructure) ? 1.25 : 1.0;
+  const waveAmplitude = l9 ? (l9.amplitude || 2) : 2;
+  const waveBoost = waveAmplitude > 3 ? 0.75 : 1.0;
+
+  let bScore=0, sScore=0;
+  let bVotes=0, sVotes=0, nullVotes=0;
+  let activeVotes=[];
+
+  layers.forEach((l, i) => {
+    if (!l || !l.vote) { nullVotes++; return; }
+
+    // Get adaptive weight (learns from recent accuracy)
+    let w = getAdaptiveWeight(BASE_W[i], i);
+
+    // Apply structural boosts
+    if (i===0 || i===1 || i===5) w *= chiBoost;
+    if (i===8 || i===9) w *= waveBoost;
+
+    const pts = w * l.confidence;
+    if (l.vote === 'B') { bScore += pts; bVotes++; }
+    else                { sScore += pts; sVotes++; }
+    activeVotes.push({ layer:i+1, vote:l.vote, pts:pts.toFixed(2), w:w.toFixed(2), conf:(l.confidence*100).toFixed(0) });
+  });
+
+  const total = bScore + sScore;
+  const totalVotes = bVotes + sVotes;
+  if (total === 0 || totalVotes === 0) return null;
+
+  const direction = bScore >= sScore ? 'B' : 'S';
+  const oppositeVotes = direction === 'B' ? sVotes : bVotes;
+  const agreeVotes    = direction === 'B' ? bVotes : sVotes;
+
+  // ── CONSENSUS RATIO: how many layers agree vs disagree ──
+  const consensusRatio = agreeVotes / totalVotes; // e.g. 7/9 = 0.78
+
+  // ── SCORE MARGIN: how dominant is the winner ──
+  const rawConf = Math.max(bScore, sScore) / total; // 0.5 to 1.0
+  const marginPct = (rawConf - 0.5) * 200; // 0 to 100
+
+  // ── ABSTENTION GATE ──
+  // Skip if: <=50% consensus (layers split exactly) OR margin too thin
+  if (consensusRatio <= 0.50) {
+    return { skip: true, skipReason: `Conflicted: layers split ${agreeVotes}/${totalVotes}`, direction, confidence:0, bScore, sScore, activeVotes, consensusRatio, marginPct };
+  }
+  if (marginPct < 4) {
+    return { skip: true, skipReason: `Margin too thin (${marginPct.toFixed(0)}%) — scores nearly equal`, direction, confidence:0, bScore, sScore, activeVotes, consensusRatio, marginPct };
+  }
+
+  // ── CONFIDENCE TIER ──
+  let tier, confDisplay;
+  if (consensusRatio >= 0.78 && marginPct >= 35) {
+    tier = 'HIGH'; confDisplay = Math.min(99, Math.round(marginPct));
+  } else if (consensusRatio >= 0.60 && marginPct >= 12) {
+    tier = 'MEDIUM'; confDisplay = Math.min(75, Math.round(marginPct));
+  } else {
+    tier = 'LOW'; confDisplay = Math.min(50, Math.round(marginPct));
+  }
+
+  return {
+    skip: false,
+    direction, tier, confidence: confDisplay,
+    bScore, sScore, activeVotes,
+    consensusRatio, marginPct,
+    agreeVotes, totalVotes
+  };
+}
+
+// ═══════════════════════════════════════════
+//  DIVERGENCE DETECTOR
+// ═══════════════════════════════════════════
+function checkDivergence(engineResult, l9) {
+  if (!engineResult || !l9 || !l9.vote) return null;
+  const engineVote = engineResult.direction;
+  const waveVote = l9.vote;
+
+  if (engineVote === waveVote) {
+    return { type: 'agree', msg: `✓ Engine + Wave AGREE → ${engineVote==='B'?'BIG':'SMALL'} · Strong signal`, cls: 'agree' };
+  } else {
+    const conf = engineResult.confidence;
+    if (conf > 60) {
+      return { type: 'strong-disagree', msg: `⚠ DIVERGENCE! Engine→${engineVote==='B'?'BIG':'SML'} but Wave→${waveVote==='B'?'BIG':'SML'} · HIGH UNCERTAINTY · Trade carefully`, cls: 'strong-disagree' };
+    }
+    return { type: 'disagree', msg: `~ Wave & Engine disagree → ${engineVote==='B'?'BIG':'SML'} (engine) vs ${waveVote==='B'?'BIG':'SML'} (wave) · Moderate uncertainty`, cls: 'disagree' };
+  }
+}
+
+// ═══════════════════════════════════════════
+//  UI UPDATE
+// ═══════════════════════════════════════════
+function updateUI() {
+  const l1=layer1_exactMatch(), l2=layer2_sizePattern(),
+        l3=layer3_roundAware(), l4=layer4_streakDetector(),
+        l5=layer5_weightedRecency(), l6=layer6_markovChain(),
+        l7=layer7_chiSquare(), l8=layer8_meanReversion(),
+        l9=layer9_waveSignal(), l10=layer10_rsiCrossover();
+
+  // v7: use Champion engine as primary
+  const result = championConsolidate(l1,l2,l3,l4,l5,l6,l7,l8,l9,l10);
+
+  if (result && !result.skip && lastPeriodId) {
+    const nextPer = incPeriod(lastPeriodId);
+    if (nextPer) predictions[nextPer] = result.direction;
+  }
+
+  updateSeqDisplay();
+  updateLayers(l1,l2,l3,l4,l5,l6,l7,l8,l9,l10);
+  updatePrediction(result);
+  updateSignalIntelligence();
+  updateRoundInfo(l9);
+  updateDivergence(result, l9);
+  updateEngineLog(l1,l2,l3,l4,l5,l6,l7,l8,l9,l10,result);
+  renderHistory();
+  updateAnalytics();
+  updateWaveTab(l9);
+  updateRSITab(l10);
+}
+
+function updateSeqDisplay() {
+  const el = document.getElementById('seqDisplay');
+  const last = rounds.slice(-6);
+  if (last.length===0) { el.innerHTML='<span style="font-size:10px;color:var(--text3);font-family:var(--mono);">Waiting...</span>'; return; }
+  el.innerHTML = last.map(r=>`<div class="seq-num ${r.type==='B'?'is-big':'is-sml'}">${r.number}</div>`).join('') +
+    '<div style="display:flex;align-items:center;color:var(--text3);font-size:16px;margin-left:4px;">→</div>';
+}
+
+function updateLayers(l1,l2,l3,l4,l5,l6,l7,l8,l9,l10) {
+  const layers = [
+    { data:l1, id:'1', fmt: l=>`D:${l.depth}|${l.bCount}B/${l.sCount}S\n${l.totalMatches} matches` },
+    { data:l2, id:'2', fmt: l=>`D:${l.depth}|${l.bCount}B/${l.sCount}S\n${l.totalMatches} matches` },
+    { data:l3, id:'3', fmt: l=>`${l.roundsAnalyzed} rounds\n${l.bCount}B / ${l.sCount}S` },
+    { data:l4, id:'4', fmt: l=>`${l.streakType} x${l.streakLen}\n${(l.confidence*100).toFixed(0)}% conf` },
+    { data:l5, id:'5', fmt: l=>`B:${l.bScore.toFixed(1)} S:${l.sScore.toFixed(1)}\nWeighted` },
+    { data:l6, id:'6', fmt: l=>`Order${l.order}|${l.bCount}B/${l.sCount}S\nState:${l.state}` },
+    { data:l7, id:'7', fmt: l=>`χ²=${l.chi2}\n${l.hasStructure?'Structure✓':'Random?'}` },
+    { data:l8, id:'8', fmt: l=>`W20:${l.w20.b}B/${l.w20.s}S\n${l.reason?l.reason.slice(0,18):'—'}` },
+    { data:l9, id:'9', fmt: l=>`${l.phase||'—'} Amp:${l.amplitude||'—'}\nMag:${l.magCenter||'—'}` },
+    { data:l10, id:'10', fmt: l=>`RSI:${l.rsi!==null?l.rsi:'—'}\n${l.cross?`${l.cross.short.toFixed(1)}vs${l.cross.long.toFixed(1)}`:'No cross'}` },
+  ];
+  layers.forEach(({ data:l, id, fmt }) => {
+    const card = document.getElementById(`layer${id}Card`);
+    const vote = document.getElementById(`l${id}vote`);
+    const detail = document.getElementById(`l${id}detail`);
+    const accBadge = document.getElementById(`l${id}acc`);
+    const isWave = id==='9'||id==='10';
+    const layerIdx = parseInt(id) - 1;
+    const acc = getLayerRecentAcc(layerIdx);
+
+    if (l && l.vote) {
+      card.className = isWave ? `layer-card vote-wave` : `layer-card vote-${l.vote.toLowerCase()}`;
+      vote.innerText = l.vote==='B'?'BIG':'SML';
+      vote.style.color = isWave ? 'var(--wave)' : (l.vote==='B'?'var(--big)':'var(--sml)');
+      detail.innerText = fmt(l);
+    } else {
+      card.className = 'layer-card vote-none';
+      vote.innerText = '—'; vote.style.color = isWave?'var(--wave)':'var(--text3)';
+      detail.innerText = l ? 'No signal' : 'Insuff.';
+    }
+    // Accuracy badge
+    if (accBadge) {
+      if (acc !== null) {
+        const pct = (acc*100).toFixed(0);
+        accBadge.innerText = `acc ${pct}%`;
+        accBadge.className = `layer-acc-badge ${acc>=0.60?'acc-good':acc<0.45?'acc-bad':''}`;
+      } else {
+        accBadge.innerText = `acc —`;
+        accBadge.className = 'layer-acc-badge';
+      }
+    }
+  });
+}
+
+function updatePrediction(result) {
+  const pb=document.getElementById('predBox'), pl=document.getElementById('predLabel'),
+        pi=document.getElementById('predIcon'), ps=document.getElementById('predSub'),
+        ms=document.getElementById('marketStatus');
+  const tierRow = document.getElementById('predTierRow');
+  const smartRow = document.getElementById('smartScoreRow');
+  const champDriversLabel = document.getElementById('champDriversLabel');
+  const champDrivers = document.getElementById('champDrivers');
+  const convictionWrap = document.getElementById('convictionWrap');
+  const convictionFill = document.getElementById('convictionFill');
+  const convictionPct = document.getElementById('convictionPct');
+
+  // Helper to render champion drivers
+  function renderDrivers(res) {
+    if (!res || !res.scored || res.scored.length === 0) {
+      champDriversLabel.style.display='none'; champDrivers.innerHTML=''; convictionWrap.style.display='none'; return;
+    }
+    const top3Votes = res.top3 ? res.top3.map(c=>c.vote) : [];
+    champDriversLabel.style.display='block';
+    champDrivers.innerHTML = res.scored.slice(0,7).map((s,i) => {
+      const isChamp = i < (res.top3?res.top3.length:0) && res.top3[i] === s;
+      const agreeClass = s.vote === res.direction ? 'agree' : 'disagree';
+      const cls = isChamp ? 'champion' : agreeClass;
+      const acc = s.acc !== null ? ` ${(s.acc*100).toFixed(0)}%` : '';
+      return `<div class="driver-chip ${cls}">${isChamp?'★':''} L${s.idx+1} ${s.name} <span style="opacity:.6">${(s.effectiveScore).toFixed(1)}${acc}</span></div>`;
+    }).join('');
+    // Conviction meter
+    convictionWrap.style.display='block';
+    const cv = Math.min(100, res.finalConviction || res.confidence || 0);
+    convictionFill.style.width = cv+'%';
+    convictionFill.style.background = cv >= 50 ? 'linear-gradient(90deg,var(--yellow),var(--green))' :
+                                        cv >= 25 ? 'var(--yellow)' : 'var(--sml)';
+    convictionPct.innerText = cv.toFixed(0)+'%';
+    convictionPct.style.color = cv>=50?'var(--green)':cv>=25?'var(--yellow)':'var(--sml)';
+  }
+
+  if (!result) {
+    pb.className='pred-box'; pb.style.background='var(--surface2)'; pb.style.borderColor='var(--border2)'; pb.style.boxShadow=''; pb.style.animation='';
+    pl.innerText='WAITING'; pl.style.color='var(--text3)'; pi.innerText='⏳';
+    ps.innerText='Load history + enter 4+ rounds to activate engine';
+    document.getElementById('confFill').style.width='0%';
+    document.getElementById('confVal').innerText='0%';
+    document.getElementById('voteBarB').style.flex=1; document.getElementById('voteBarS').style.flex=1;
+    document.getElementById('voteBarB').innerText='—'; document.getElementById('voteBarS').innerText='—';
+    ms.innerText='Waiting for data'; ms.style.color='var(--text3)';
+    tierRow.innerHTML=''; smartRow.style.display='none';
+    champDriversLabel.style.display='none'; champDrivers.innerHTML=''; convictionWrap.style.display='none';
+    return;
+  }
+
+  // ── SKIP STATE ──
+  if (result.skip) {
+    pb.className='pred-box'; pb.style.background='rgba(255,255,255,0.02)'; pb.style.borderColor='var(--border2)'; pb.style.boxShadow='none'; pb.style.animation='none';
+    pl.innerText='SKIP'; pl.style.color='var(--text3)'; pi.innerText='🚫';
+    ps.innerText=result.skipReason || 'Signals too conflicted — no safe prediction';
+    tierRow.innerHTML=`<div class="pred-tier tier-skip">⊘ NO TRADE — Wait for Champion Signal</div>`;
+    document.getElementById('confFill').style.width='0%';
+    document.getElementById('confVal').innerText='0%';
+    document.getElementById('confVal').style.color='var(--text3)';
+    const t = result.bScore+result.sScore;
+    const bF = t>0?Math.max(.1,result.bScore/t*10):1, sF = t>0?Math.max(.1,result.sScore/t*10):1;
+    document.getElementById('voteBarB').style.flex=bF; document.getElementById('voteBarB').innerText=`B ${result.bScore.toFixed(1)}`;
+    updateBetSizing(null, null, true);
+    document.getElementById('voteBarS').style.flex=sF; document.getElementById('voteBarS').innerText=`S ${result.sScore.toFixed(1)}`;
+    ms.innerText='🔴 Skip Round'; ms.style.color='var(--text3)';
+    smartRow.style.display='flex';
+    document.getElementById('consensusVal').innerText = `${(result.consensusRatio*100).toFixed(0)}%`;
+    document.getElementById('marginVal').innerText = `${result.marginPct.toFixed(0)}%`;
+    document.getElementById('activeVal').innerText = `${result.scored?result.scored.length:0}`;
+    document.getElementById('abstainVal').innerText = `${10 - (result.scored?result.scored.length:0)}`;
+    renderDrivers(result);
+    return;
+  }
+
+  const isBig = result.direction==='B';
+  const tier = result.tier;
+  const col = isBig ? 'var(--big)' : 'var(--sml)';
+
+  // Box styling — Champion system gives more dramatic HIGH styling
+  if (tier === 'HIGH') {
+    pb.className = `pred-box ${isBig?'champ-big':'champ-sml'}`;
+    pb.style.background=''; pb.style.borderColor=''; pb.style.boxShadow=''; pb.style.animation='';
+  } else if (tier === 'MEDIUM') {
+    pb.className = 'pred-box';
+    pb.style.background = `rgba(${isBig?'59,130,246':'239,68,68'},.10)`;
+    pb.style.borderColor = col; pb.style.boxShadow = `0 0 18px rgba(${isBig?'59,130,246':'239,68,68'},.15)`;
+    pb.style.animation = 'none';
+  } else {
+    pb.className = 'pred-box';
+    pb.style.background = `rgba(${isBig?'59,130,246':'239,68,68'},.05)`;
+    pb.style.borderColor = col; pb.style.boxShadow = 'none'; pb.style.animation = 'none';
+  }
+
+  // Tier badge
+  const tierIcon = tier==='HIGH' ? '🏆' : tier==='MEDIUM' ? '〰' : '⚠';
+  const tierClass = tier==='HIGH' ? 'tier-high' : tier==='MEDIUM' ? 'tier-medium' : 'tier-low';
+  const tierLabel = tier==='HIGH' ? 'HIGH CONVICTION — Champions Agree' : tier==='MEDIUM' ? 'MEDIUM — 2 Champions Agree' : 'LOW — Single Champion';
+  tierRow.innerHTML = `<div class="pred-tier ${tierClass}">${tierIcon} ${tierLabel}</div>`;
+
+  // Update bet sizing panel
+  updateBetSizing(tier, result.direction, false);
+
+  pl.innerText = (tier==='HIGH'?'🏆 ':'') + (isBig?'BIG':'SMALL');
+  pl.style.color = col; pi.innerText = isBig?'📈':'📉';
+  ps.innerText = `${result.agreeVotes}/${result.totalVotes} layers agree · Conviction ${result.confidence}%`;
+
+  document.getElementById('confFill').style.width = result.confidence+'%';
+  document.getElementById('confFill').style.background = col;
+  document.getElementById('confVal').innerText = result.confidence+'%';
+  document.getElementById('confVal').style.color = col;
+
+  const t = result.bScore+result.sScore;
+  const bF = t>0?Math.max(.1,result.bScore/t*10):1, sF = t>0?Math.max(.1,result.sScore/t*10):1;
+  document.getElementById('voteBarB').style.flex=bF; document.getElementById('voteBarB').innerText=`B ${result.bScore.toFixed(1)}`;
+  document.getElementById('voteBarS').style.flex=sF; document.getElementById('voteBarS').innerText=`S ${result.sScore.toFixed(1)}`;
+
+  ms.innerText = tier==='HIGH'?'🟢 Champion Signal':tier==='MEDIUM'?'🟡 Moderate Signal':'🟠 Weak Signal';
+  ms.style.color = tier==='HIGH'?'var(--green)':tier==='MEDIUM'?'var(--yellow)':'var(--orange)';
+
+  smartRow.style.display='flex';
+  document.getElementById('consensusVal').innerText = `${(result.consensusRatio*100).toFixed(0)}%`;
+  document.getElementById('marginVal').innerText = `${result.marginPct.toFixed(0)}%`;
+  document.getElementById('activeVal').innerText = `${result.scored?result.scored.length:0}`;
+  document.getElementById('abstainVal').innerText = `${10 - (result.scored?result.scored.length:0)}`;
+
+  renderDrivers(result);
+  if (tier==='HIGH') playHighConfidenceAlert();
+}
+
+// ═══════════════════════════════════════════
+//  SIGNAL INTELLIGENCE UI UPDATE v7
+// ═══════════════════════════════════════════
+function updateSignalIntelligence() {
+  // ── ACF Panel ──
+  const acf = calcAutocorrelation(8);
+  const acfBars = document.getElementById('acfBars');
+  const acfBadge = document.getElementById('acfBadge');
+  const acfDesc = document.getElementById('acfDesc');
+  if (acf) {
+    const sigT = acf.sigThreshold;
+    acfBars.innerHTML = acf.acf.map((v, i) => {
+      const abs = Math.abs(v);
+      const isSig = abs > sigT;
+      const pct = Math.min(100, abs / 0.5 * 100); // 0.5 = max visible
+      const h = Math.max(3, Math.round(pct * 0.5)); // max 50px
+      const col = isSig ? (v > 0 ? 'var(--big)' : 'var(--sml)') : 'rgba(255,255,255,0.15)';
+      return `<div class="acf-bar-wrap"><div class="acf-bar" style="height:${h}px;background:${col}"></div><div class="acf-lbl">L${i+1}</div></div>`;
+    }).join('');
+    if (acf.sigCount >= 3) {
+      acfBadge.className = 'sig-badge sig-hot'; acfBadge.innerText = 'MEMORY';
+    } else if (acf.sigCount >= 1) {
+      acfBadge.className = 'sig-badge sig-structure'; acfBadge.innerText = 'PATTERN';
+    } else {
+      acfBadge.className = 'sig-badge sig-cold'; acfBadge.innerText = 'RANDOM';
+    }
+    acfDesc.innerText = `${acf.sigCount}/8 lags significant (±${sigT.toFixed(3)}) · ${acf.hasMemory?'Sequence has memory':'Independent draws'}`;
+  } else {
+    acfBadge.className = 'sig-badge sig-cold'; acfBadge.innerText = '—';
+    acfDesc.innerText = 'Need 25+ rounds';
+  }
+
+  // ── Entropy Panel ──
+  const entropy = calcEntropy();
+  const entropyBadge = document.getElementById('entropyBadge');
+  const entropyValue = document.getElementById('entropyValue');
+  const entropyBar = document.getElementById('entropyBar');
+  const entropyDesc = document.getElementById('entropyDesc');
+  if (entropy) {
+    entropyValue.innerText = entropy.normalised.toFixed(3);
+    const col = entropy.normalised < 0.70 ? 'var(--yellow)' : entropy.normalised < 0.88 ? 'var(--green)' : 'var(--sml)';
+    entropyValue.style.color = col;
+    entropyBar.style.width = (entropy.normalised * 100) + '%';
+    entropyBar.style.background = entropy.normalised < 0.70 ? 'var(--yellow)' : entropy.normalised < 0.88 ? 'var(--green)' : 'var(--sml)';
+    entropyBadge.className = 'sig-badge ' + entropy.zoneClass;
+    entropyBadge.innerText = entropy.zone;
+    entropyDesc.innerText = `H=${entropy.H.toFixed(3)} bits · ${entropy.normalised<0.70?'Strong structure → patterns reliable':entropy.normalised<0.88?'Moderate structure':'High noise → reduce bet size'}`;
+  } else {
+    entropyBadge.className = 'sig-badge sig-cold'; entropyBadge.innerText = '—';
+    entropyValue.innerText = '—'; entropyValue.style.color = 'var(--text3)';
+    entropyBar.style.width = '0%';
+    entropyDesc.innerText = 'Need 10+ rounds';
+  }
+
+  // ── Run-Length Deviation Panel ──
+  const rld = calcRunLengthDeviation();
+  const rldBadge = document.getElementById('rldBadge');
+  const rldBFill = document.getElementById('rldBFill');
+  const rldSFill = document.getElementById('rldSFill');
+  const rldBVal = document.getElementById('rldBVal');
+  const rldSVal = document.getElementById('rldSVal');
+  const rldDesc = document.getElementById('rldDesc');
+  if (rld) {
+    rldBadge.className = 'sig-badge ' + rld.cls; rldBadge.innerText = rld.label;
+    // Score bars — deviation as % of expected
+    const bPct = Math.min(100, rld.bStats.score * 100);
+    const sPct = Math.min(100, rld.sStats.score * 100);
+    rldBFill.style.width = bPct + '%';
+    rldSFill.style.width = sPct + '%';
+    rldBVal.innerText = `μ=${rld.bStats.mean}`;
+    rldSVal.innerText = `μ=${rld.sStats.mean}`;
+    const bDir = rld.bStats.dev > 0 ? '↑long' : rld.bStats.dev < 0 ? '↓short' : 'normal';
+    const sDir = rld.sStats.dev > 0 ? '↑long' : rld.sStats.dev < 0 ? '↓short' : 'normal';
+    rldDesc.innerText = `B-runs ${bDir} (exp 2.0) · S-runs ${sDir} · Dev score ${(rld.overallDev*100).toFixed(0)}%`;
+  } else {
+    rldBadge.className = 'sig-badge sig-cold'; rldBadge.innerText = '—';
+    rldBFill.style.width = '0%'; rldSFill.style.width = '0%';
+    rldBVal.innerText = '—'; rldSVal.innerText = '—';
+    rldDesc.innerText = 'Need 20+ rounds';
+  }
+
+  // ── Z-Score Drift Panel ──
+  const zdrift = calcZScoreDrift();
+  const zscoreBadge = document.getElementById('zscoreBadge');
+  const zscoreValue = document.getElementById('zscoreValue');
+  const zdriftFill = document.getElementById('zdriftFill');
+  const mrTrigger = document.getElementById('mrTrigger');
+  if (zdrift) {
+    zscoreBadge.className = 'sig-badge ' + zdrift.cls; zscoreBadge.innerText = zdrift.label.split(' ').slice(-1)[0];
+    zscoreValue.innerText = (zdrift.z >= 0 ? '+' : '') + zdrift.z.toFixed(2);
+    const zCol = Math.abs(zdrift.z) >= 2.5 ? (zdrift.z>0?'var(--sml)':'var(--big)') :
+                 Math.abs(zdrift.z) >= 2.0 ? 'var(--yellow)' : 'var(--text2)';
+    zscoreValue.style.color = zCol;
+    // Drift bar: center=50%, positive z moves right (SMALL bias), negative left (BIG bias)
+    const zPct = Math.min(45, Math.abs(zdrift.z) / 3 * 45); // max 45% offset from center
+    if (zdrift.z > 0) {
+      // BIG heavy → bar moves right showing SMALL reversion
+      zdriftFill.style.left = '50%';
+      zdriftFill.style.right = 'auto';
+      zdriftFill.style.width = zPct + '%';
+      zdriftFill.style.background = 'var(--sml)';
+    } else {
+      // SMALL heavy → bar moves left showing BIG reversion
+      zdriftFill.style.right = '50%';
+      zdriftFill.style.left = 'auto';
+      zdriftFill.style.width = zPct + '%';
+      zdriftFill.style.background = 'var(--big)';
+    }
+    if (zdrift.trigger) {
+      const side = zdrift.reversionSide === 'B' ? 'BIG' : 'SMALL';
+      mrTrigger.className = 'mr-trigger mr-active';
+      mrTrigger.innerText = `⚡ REVERSION TRIGGER → ${side} ${zdrift.triggerStrong?'(STRONG)':''}`;
+    } else {
+      mrTrigger.className = 'mr-trigger mr-quiet';
+      mrTrigger.innerText = `⊘ No trigger · ${zdrift.bigCount}B / ${zdrift.smlCount}S in last ${zdrift.n}`;
+    }
+  } else {
+    zscoreBadge.className = 'sig-badge sig-cold'; zscoreBadge.innerText = '—';
+    zscoreValue.innerText = '—'; zscoreValue.style.color = 'var(--text3)';
+    zdriftFill.style.width = '0%';
+    mrTrigger.className = 'mr-trigger mr-quiet';
+    mrTrigger.innerText = '⊘ Need 15+ rounds';
+  }
+}
+
+function updateRoundInfo(l9) {
+  if (rounds.length===0) return;
+  const last = rounds[rounds.length-1];
+  const info = getRoundInfo(last.period);
+  if (info.roundNum<0) return;
+  document.getElementById('rndNum').innerText = info.roundNum;
+  document.getElementById('rndPos').innerText = `${info.posInRound+1}/10`;
+  document.getElementById('rndTotal').innerText = rounds.length;
+
+  let streak=1;
+  const lt = rounds[rounds.length-1].type;
+  for (let i=rounds.length-2;i>=0;i--) { if(rounds[i].type===lt) streak++; else break; }
+  document.getElementById('streakPill').innerText = `${streak}× ${lt==='B'?'BIG':'SML'}`;
+  document.getElementById('streakPill').style.color = lt==='B'?'var(--big)':'var(--sml)';
+
+  if (l9 && l9.phase) {
+    document.getElementById('wavePhasePill').innerText = l9.phase;
+    document.getElementById('wavePhasePill').style.color = l9.phaseColor || 'var(--wave)';
+  }
+}
+
+function updateDivergence(result, l9) {
+  const el = document.getElementById('divergenceAlert');
+  if (!result || result.skip) { el.style.display='none'; return; }
+  const div = checkDivergence(result, l9);
+  if (!div) { el.style.display='none'; return; }
+  el.style.display='block';
+  el.className = `divergence-alert ${div.cls}`;
+  el.innerText = div.msg;
+}
+
+function updateEngineLog(l1,l2,l3,l4,l5,l6,l7,l8,l9,l10,result) {
+  const fo = document.getElementById('engineLog');
+  if (!result && rounds.length<5) { fo.innerText='Waiting for enough data (need 4+ entries + history)'; return; }
+  let log='';
+  const layerInfo = [
+    ['LAYER 1: Exact Numbers',   l1, l=>l.vote?`Pattern [${l.pattern.join(',')}] d${l.depth} | ${l.bCount}B/${l.sCount}S | WR:${(l.confidence*100).toFixed(0)}%`:'No match'],
+    ['LAYER 2: Size Pattern',    l2, l=>l.vote?`Pattern [${l.pattern?l.pattern.join(''):'—'}] d${l.depth} | ${l.bCount}B/${l.sCount}S | WR:${(l.confidence*100).toFixed(0)}%`:'No match'],
+    ['LAYER 3: Round-Aware',     l3, l=>l&&l.vote?`${l.roundsAnalyzed} rounds | ${l.bCount}B/${l.sCount}S`:l?'No pattern':'Need 11+'],
+    ['LAYER 4: Streak',          l4, l=>l&&l.vote?`${l.streakType} ×${l.streakLen} → break ${(l.confidence*100).toFixed(0)}%`:l?`Normal ×${l&&l.streakLen||0}`:'Insuff.'],
+    ['LAYER 5: Weighted Rec.',   l5, l=>l&&l.vote?`B:${l.bScore.toFixed(1)} S:${l.sScore.toFixed(1)} | Conf:${(l.confidence*100).toFixed(0)}%`:l?'No signal':'Need 10+'],
+    ['LAYER 6: Markov Chain',    l6, l=>l&&l.vote?`Order-${l.order} | State:[${l.state}] | ${l.bCount}B/${l.sCount}S | Conf:${(l.confidence*100).toFixed(0)}%`:l?`State:[${l&&l.state}] no gate`:'Need 20+'],
+    ['LAYER 7: Chi-Square',      l7, l=>l?`χ²=${l.chi2} Trans-χ²=${l.transChi2} | ${l.hasStructure?'✓ STRUCTURE':'〰 Random'} | ${l.bigC}B/${l.smlC}S`:'Need 30+'],
+    ['LAYER 8: Mean Reversion',  l8, l=>l&&l.vote?`W10:${l.w10.b}B/${l.w10.s}S W20:${l.w20.b}B/${l.w20.s}S | ${l.reason||''}`:l?l.reason||'No signal':'Need 20+'],
+    ['LAYER 9: Wave Signal',     l9, l=>l&&l.vote?`Phase:${l.phase} Amp:${l.amplitude} MagCenter:${l.magCenter}\n║  ${l.phaseDesc||''}`:l?l.reason||'No wave':'Need 20+'],
+    ['LAYER 10: RSI+Crossover',  l10, l=>l?`RSI:${l.rsi!==null?l.rsi:'—'} | ${l.reason||'—'}`:l?'No signal':'Need 5+ cycles'],
+  ];
+  layerInfo.forEach(([name,layer,fmt]) => {
+    log += `╠══ ${name} ${'═'.repeat(Math.max(0,30-name.length))}\n`;
+    log += `║  ${layer?fmt(layer):'No data'}\n`;
+    log += `║  Vote: ${layer&&layer.vote?(layer.vote==='B'?'📈 BIG':'📉 SMALL'):'—'}\n`;
+  });
+  if (result) {
+    const skipNote = result.skip ? ' ⊘ SKIP' : '';
+    log += `╠══ CHAMPION ENGINE v7${skipNote} ═══════════════\n`;
+    log += `║  BIG:${result.bScore.toFixed(3)}  SMALL:${result.sScore.toFixed(3)}\n`;
+    log += `║  Consensus: ${(result.consensusRatio*100).toFixed(0)}%  Margin: ${result.marginPct.toFixed(0)}%\n`;
+    if (result.scored) {
+      log += `║  Active layers: ${result.scored.length}/10 · Champions: ${result.top3?result.top3.map(c=>`L${c.idx+1}(${(c.effectiveScore).toFixed(1)})`).join(' '):'—'}\n`;
+    }
+    // Signal Intelligence summary
+    const ent = calcEntropy();
+    const zdrift = calcZScoreDrift();
+    const rld = calcRunLengthDeviation();
+    if (ent) log += `║  Entropy: ${ent.normalised.toFixed(3)} [${ent.zone}] · Mod: ×${result.entropyMod?result.entropyMod.toFixed(2):'1.0'}\n`;
+    if (zdrift) log += `║  Z-Score: ${zdrift.z.toFixed(3)} · Trigger: ${zdrift.trigger?`${zdrift.reversionSide==='B'?'BIG':'SMALL'} ⚡`:'None'} · Mod: ×${result.zMod?result.zMod.toFixed(2):'1.0'}\n`;
+    if (rld) log += `║  RunLen Dev: ${(rld.overallDev*100).toFixed(0)}% [${rld.label}] · Mod: ×${result.rldMod?result.rldMod.toFixed(2):'1.0'}\n`;
+    if (result.skip) {
+      log += `╚══ VERDICT: ⊘ SKIP — ${result.skipReason} ══`;
+    } else {
+      log += `║  Adaptive calibration: ${layerAccHistory.filter(h=>h.length>=5).length} layers self-calibrating\n`;
+      log += `╚══ VERDICT: ${result.direction==='B'?'📈 BIG':'📉 SMALL'} [${result.tier}] Conviction ${result.confidence}% ══`;
+    }
+  }
+  fo.innerText = log;
+}
+
+// ═══════════════════════════════════════════
+//  WAVE TAB UPDATE
+// ═══════════════════════════════════════════
+function updateWaveTab(l9) {
+  const avgs = getCycleAverages();
+
+  // Draw wave canvas
+  drawWaveCanvas(avgs);
+
+  // Stats
+  document.getElementById('wsCycles').innerText = avgs.length || '—';
+
+  if (avgs.length > 0) {
+    const current = avgs[avgs.length-1];
+    document.getElementById('wsCurrent').innerText = current.avg.toFixed(2);
+    document.getElementById('wsCurrent').style.color = current.avg > 4.5 ? 'var(--big)' : 'var(--sml)';
+  }
+
+  if (l9) {
+    document.getElementById('wsAmplitude').innerText = l9.amplitude !== undefined ? l9.amplitude : '—';
+    const amp = l9.amplitude || 0;
+    document.getElementById('wsAmplitude').style.color = amp > 3 ? 'var(--sml)' : amp > 1.5 ? 'var(--yellow)' : 'var(--green)';
+
+    const trend = avgs.length>=2 ? (avgs[avgs.length-1].avg > avgs[avgs.length-2].avg ? '↗ UP' : '↘ DOWN') : '—';
+    document.getElementById('wsTrend').innerText = trend;
+    document.getElementById('wsTrend').style.color = trend.includes('UP') ? 'var(--big)' : 'var(--sml)';
+  }
+
+  // Phase info
+  if (l9 && l9.phase) {
+    const phaseClass = { RISING:'phase-rising', PEAK:'phase-peak', FALLING:'phase-falling', TROUGH:'phase-trough', FLAT:'', UNKNOWN:'' };
+    document.getElementById('wavePhaseInfo').innerHTML =
+      `<span class="phase-badge ${phaseClass[l9.phase]||''}">${l9.phase} ${l9.phaseDesc?'— '+l9.phaseDesc:''}</span>`;
+  }
+
+  // Magnetic center
+  const magCenter = avgs.length>0 ? getMagneticCenter(avgs) : null;
+  if (magCenter !== null) {
+    document.getElementById('magVal').innerText = magCenter.toFixed(2);
+    const diff = magCenter - 4.5;
+    document.getElementById('magDesc').innerHTML =
+      `True gravitational center of this game<br>` +
+      `<span style="color:${Math.abs(diff)>0.3?(diff>0?'var(--big)':'var(--sml)'):'var(--green)'}">` +
+      `${diff>0?'Biased BIG by':'Biased SMALL by'} ${Math.abs(diff).toFixed(2)} from 4.5` +
+      `</span><br>All predictions adjusted around ${magCenter.toFixed(2)}`;
+  }
+
+  // Wave log
+  let wlog = '';
+  if (avgs.length === 0) {
+    wlog = 'No complete cycles yet. Need 10+ rounds with period IDs.';
+  } else {
+    avgs.slice(-15).forEach((a, i) => {
+      const idx = Math.max(0, avgs.length-15)+i;
+      const bar = a.avg > 4.5 ? '▲ BIG ' : '▼ SML ';
+      const filled = Math.round((a.avg/9)*12);
+      const chart = '█'.repeat(filled) + '░'.repeat(12-filled);
+      wlog += `Cycle ${String(a.cycleNum).slice(-4)} | Avg:${a.avg.toFixed(2)} [${chart}] ${bar} (${a.count} rounds)\n`;
+    });
+    if (avgs.length > 15) wlog = `... ${avgs.length-15} earlier cycles ...\n` + wlog;
+  }
+  document.getElementById('waveLog').innerText = wlog;
+}
+
+// ═══════════════════════════════════════════
+//  WAVE CANVAS DRAWING
+// ═══════════════════════════════════════════
+function drawWaveCanvas(avgs) {
+  const canvas = document.getElementById('waveCanvas');
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.clientWidth - 24;
+  const H = 180;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  ctx.clearRect(0,0,W,H);
+
+  if (avgs.length < 2) {
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Need 2+ complete cycles to draw wave', W/2, H/2);
+    return;
+  }
+
+  const show = avgs.slice(-30);
+  const n = show.length;
+  const pad = { l:36, r:16, t:20, b:32 };
+  const chartW = W - pad.l - pad.r;
+  const chartH = H - pad.t - pad.b;
+
+  const minV = Math.min(...show.map(a=>a.avg), 0);
+  const maxV = Math.max(...show.map(a=>a.avg), 9);
+  const range = maxV - minV || 1;
+
+  const xOf = (i) => pad.l + (i / (n-1)) * chartW;
+  const yOf = (v) => pad.t + chartH - ((v - minV) / range) * chartH;
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (let v=0; v<=9; v+=3) {
+    const y = yOf(v);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W-pad.r, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.font = '8px monospace'; ctx.textAlign = 'right';
+    ctx.fillText(v, pad.l-4, y+3);
+  }
+
+  // Center line (4.5)
+  ctx.strokeStyle = 'rgba(251,191,36,0.35)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4,4]);
+  const cy = yOf(4.5);
+  ctx.beginPath(); ctx.moveTo(pad.l, cy); ctx.lineTo(W-pad.r, cy); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(251,191,36,0.5)';
+  ctx.font = '7px monospace'; ctx.textAlign = 'right';
+  ctx.fillText('4.5', pad.l-4, cy+3);
+
+  // Fill area under/over center
+  show.forEach((a, i) => {
+    if (i === n-1) return;
+    const x1=xOf(i), x2=xOf(i+1), y1=yOf(a.avg), y2=yOf(show[i+1].avg);
+    const midY = yOf(4.5);
+    const isBig1 = a.avg > 4.5, isBig2 = show[i+1].avg > 4.5;
+    const col = (isBig1 || isBig2) ? 'rgba(59,130,246,0.08)' : 'rgba(239,68,68,0.08)';
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.lineTo(x2, midY); ctx.lineTo(x1, midY);
+    ctx.closePath(); ctx.fill();
+  });
+
+  // Wave line (gradient)
+  const grad = ctx.createLinearGradient(pad.l, 0, W-pad.r, 0);
+  grad.addColorStop(0, 'rgba(6,182,212,0.4)');
+  grad.addColorStop(1, 'rgba(6,182,212,1)');
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  show.forEach((a, i) => {
+    i===0 ? ctx.moveTo(xOf(i), yOf(a.avg)) : ctx.lineTo(xOf(i), yOf(a.avg));
+  });
+  ctx.stroke();
+
+  // Dots
+  show.forEach((a, i) => {
+    const x = xOf(i), y = yOf(a.avg);
+    const isBig = a.avg > 4.5;
+    ctx.beginPath();
+    ctx.arc(x, y, i===n-1?5:3, 0, Math.PI*2);
+    ctx.fillStyle = i===n-1 ? (isBig?'var(--big)':'var(--sml)') : (isBig?'rgba(59,130,246,0.8)':'rgba(239,68,68,0.8)');
+    ctx.fill();
+    ctx.strokeStyle = 'var(--bg)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  });
+
+  // Latest value label
+  const lastA = show[n-1];
+  const lx = xOf(n-1), ly = yOf(lastA.avg);
+  ctx.fillStyle = lastA.avg > 4.5 ? 'var(--big)' : 'var(--sml)';
+  ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center';
+  ctx.fillText(lastA.avg.toFixed(2), lx, ly - 9);
+}
+
+// ═══════════════════════════════════════════
+//  RSI TAB UPDATE
+// ═══════════════════════════════════════════
+function updateRSITab(l10) {
+  const avgs = getCycleAverages();
+  const rsi = calcRSI(avgs);
+  const cross = calcCrossover(avgs);
+
+  // RSI needle
+  if (rsi !== null) {
+    document.getElementById('rsiValue').innerText = rsi.toFixed(1);
+    document.getElementById('rsiNeedle').style.left = rsi + '%';
+    document.getElementById('rsiValue').style.color = rsi < 30 ? 'var(--green)' : rsi > 70 ? 'var(--sml)' : 'var(--yellow)';
+
+    let sig = '';
+    if (rsi < 20) sig = `🟢 STRONGLY OVERSOLD (${rsi}) — BIG correction very likely`;
+    else if (rsi < 30) sig = `🟢 OVERSOLD (${rsi}) — BIG due · Consider BIG`;
+    else if (rsi > 80) sig = `🔴 STRONGLY OVERBOUGHT (${rsi}) — SMALL correction very likely`;
+    else if (rsi > 70) sig = `🔴 OVERBOUGHT (${rsi}) — SMALL due · Consider SMALL`;
+    else sig = `🟡 NEUTRAL ZONE (${rsi}) — No extreme signal`;
+    document.getElementById('rsiSignal').innerText = sig;
+    document.getElementById('rsiSignal').style.color = rsi<30?'var(--green)':rsi>70?'var(--sml)':'var(--yellow)';
+  } else {
+    document.getElementById('rsiValue').innerText = '—';
+    document.getElementById('rsiSignal').innerText = 'Need 5+ complete cycles for RSI calculation';
+  }
+
+  // Crossover canvas
+  drawCrossoverCanvas(avgs);
+
+  // Crossover signal text
+  if (cross) {
+    let csig = '';
+    const col = cross.signal==='B'?'var(--big)':'var(--sml)';
+    if (cross.crossType === 'GOLDEN') csig = `✨ GOLDEN CROSS — Short MA crossed ABOVE Long MA → BIG signal`;
+    else if (cross.crossType === 'DEATH') csig = `💀 DEATH CROSS — Short MA crossed BELOW Long MA → SMALL signal`;
+    else csig = `MA Trend: Short(${cross.short.toFixed(2)}) ${cross.signal==='B'?'>':'<'} Long(${cross.long.toFixed(2)}) → ${cross.signal==='B'?'BIG':'SMALL'} leaning`;
+    document.getElementById('crossoverSignal').innerText = csig;
+    document.getElementById('crossoverSignal').style.color = col;
+  } else {
+    document.getElementById('crossoverSignal').innerText = 'Need 7+ complete cycles for crossover analysis';
+    document.getElementById('crossoverSignal').style.color = 'var(--text3)';
+  }
+}
+
+function drawCrossoverCanvas(avgs) {
+  const canvas = document.getElementById('crossCanvas');
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.clientWidth - 16;
+  const H = 140;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0,0,W,H);
+
+  if (avgs.length < 7) {
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.font = '11px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('Need 7+ cycles for crossover', W/2, H/2);
+    return;
+  }
+
+  const show = avgs.slice(-20);
+  const n = show.length;
+  const pad = { l:32, r:12, t:16, b:24 };
+  const chartW = W - pad.l - pad.r;
+  const chartH = H - pad.t - pad.b;
+
+  // Build short and long MA arrays
+  const shortMA = [], longMA = [];
+  for (let i=0; i<n; i++) {
+    const sSlice = show.slice(Math.max(0,i-2), i+1).map(a=>a.avg);
+    shortMA.push(sSlice.reduce((a,b)=>a+b,0)/sSlice.length);
+    const lSlice = show.slice(Math.max(0,i-6), i+1).map(a=>a.avg);
+    longMA.push(lSlice.reduce((a,b)=>a+b,0)/lSlice.length);
+  }
+
+  const allVals = [...shortMA, ...longMA, 4.5];
+  const minV = Math.min(...allVals)-0.3, maxV = Math.max(...allVals)+0.3;
+  const range = maxV - minV || 1;
+
+  const xOf = (i) => pad.l + (i/(n-1))*chartW;
+  const yOf = (v) => pad.t + chartH - ((v-minV)/range)*chartH;
+
+  // Center line
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth=1; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(pad.l,yOf(4.5)); ctx.lineTo(W-pad.r,yOf(4.5)); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Y labels
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.font = '7px monospace'; ctx.textAlign = 'right';
+  [Math.ceil(minV), 4.5, Math.floor(maxV)].forEach(v => {
+    ctx.fillText(v.toFixed(1), pad.l-3, yOf(v)+3);
+  });
+
+  // Long MA line (yellow)
+  ctx.strokeStyle = 'rgba(251,191,36,0.7)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  longMA.forEach((v,i) => i===0?ctx.moveTo(xOf(i),yOf(v)):ctx.lineTo(xOf(i),yOf(v)));
+  ctx.stroke();
+
+  // Short MA line (cyan)
+  ctx.strokeStyle = 'rgba(34,211,165,0.9)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  shortMA.forEach((v,i) => i===0?ctx.moveTo(xOf(i),yOf(v)):ctx.lineTo(xOf(i),yOf(v)));
+  ctx.stroke();
+
+  // Crossover markers
+  for (let i=1; i<n; i++) {
+    const crossed = (shortMA[i-1]<longMA[i-1] && shortMA[i]>=longMA[i]) ||
+                    (shortMA[i-1]>longMA[i-1] && shortMA[i]<=longMA[i]);
+    if (crossed) {
+      const isGolden = shortMA[i] >= longMA[i];
+      ctx.beginPath();
+      ctx.arc(xOf(i), yOf(shortMA[i]), 6, 0, Math.PI*2);
+      ctx.fillStyle = isGolden ? 'rgba(34,211,165,0.4)' : 'rgba(239,68,68,0.4)';
+      ctx.fill();
+      ctx.strokeStyle = isGolden ? 'var(--green)' : 'var(--sml)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+  }
+}
+
+// ═══════════════════════════════════════════
+//  24H SESSION CALCULATOR
+// ═══════════════════════════════════════════
+function calcSession() {
+  const total24h = parseFloat(document.getElementById('sess24h').value) || 0;
+  const completed = parseFloat(document.getElementById('sessCompleted').value) || 0;
+  const obsAvg = parseFloat(document.getElementById('sessObsAvg').value);
+  const expAvgInput = parseFloat(document.getElementById('sessExpAvg').value);
+
+  const avgs = getCycleAverages();
+  const histMagCenter = avgs.length > 0 ? getMagneticCenter(avgs) : 4.5;
+  const expAvg = !isNaN(expAvgInput) ? expAvgInput : histMagCenter;
+
+  if (total24h === 0 || completed === 0) {
+    document.getElementById('sessionResult').innerText = '⚠ Please fill in Total Rounds and Completed Rounds.';
+    return;
+  }
+
+  const remaining = total24h - completed;
+  const progress = (completed / total24h * 100).toFixed(1);
+
+  let result = `━━ 24H SESSION WAVE ANALYSIS ━━\n\n`;
+  result += `Total Rounds (24h)  : ${total24h}\n`;
+  result += `Completed So Far    : ${completed} (${progress}%)\n`;
+  result += `Remaining Rounds    : ${remaining}\n\n`;
+
+  if (!isNaN(obsAvg)) {
+    const deviation = obsAvg - expAvg;
+    const isHigh = obsAvg > expAvg;
+    result += `Observed Avg        : ${obsAvg.toFixed(2)}\n`;
+    result += `Expected Avg        : ${expAvg.toFixed(2)} (${avgs.length>0?'from history':'default 4.5'})\n`;
+    result += `Deviation           : ${deviation>=0?'+':''}${deviation.toFixed(2)} (${isHigh?'BIG-heavy':'SMALL-heavy'})\n\n`;
+
+    result += `━━ WAVE POSITION ━━\n`;
+    if (Math.abs(deviation) > 0.5) {
+      const correctionSide = isHigh ? 'SMALL' : 'BIG';
+      const severity = Math.abs(deviation) > 1 ? 'STRONG' : 'MODERATE';
+      result += `📡 ${severity} CORRECTION SIGNAL\n`;
+      result += `Game is ${isHigh?'BIG':'SMALL'}-heavy → expect ${correctionSide} correction\n`;
+      result += `Estimated correction rounds: ~${Math.round(remaining * 0.3)} of next ${remaining}\n`;
+    } else {
+      result += `📊 Wave near center — balanced session\n`;
+      result += `No strong correction signal at this time\n`;
+    }
+
+    const cycleProgress = (completed % 10) / 10;
+    result += `\n━━ CYCLE POSITION ━━\n`;
+    result += `Current cycle pos   : ${(completed%10)+1}/10\n`;
+    result += `Next cycle starts at: round ${Math.ceil(completed/10)*10+1}\n`;
+  } else {
+    result += `ℹ Enter "Your Obs. Avg" for wave analysis\n`;
+  }
+
+  result += `\n━━ HISTORY CONTEXT ━━\n`;
+  result += `History Cycles      : ${avgs.length}\n`;
+  result += `Magnetic Center     : ${histMagCenter.toFixed(2)}\n`;
+  if (avgs.length>=3) {
+    const phase = getWavePhase(avgs);
+    result += `Current Wave Phase  : ${phase.phase}\n`;
+    result += `Signal              : ${phase.signal ? (phase.signal==='B'?'→ BIG':'→ SMALL') : '→ Neutral'}\n`;
+  }
+
+  document.getElementById('sessionResult').innerText = result;
+}
+
+// ═══════════════════════════════════════════
+//  ANALYTICS
+// ═══════════════════════════════════════════
+function updateAnalytics() {
+  if (rounds.length===0) return;
+  const bigC = rounds.filter(r=>r.type==='B').length;
+  const smlC = rounds.filter(r=>r.type==='S').length;
+  const tot = rounds.length;
+  document.getElementById('statTotal').innerText = tot;
+  document.getElementById('statBig').innerText = bigC;
+  document.getElementById('statSml').innerText = smlC;
+
+  let predTot=0, predCorr=0;
+  rounds.forEach(r => {
+    if (predictions[r.period]) {
+      predTot++;
+      if (predictions[r.period]===r.type) predCorr++;
+    }
+  });
+  document.getElementById('statPredTotal').innerText = predTot;
+  document.getElementById('statPredCorrect').innerText = predCorr;
+  document.getElementById('statAccuracy').innerText = predTot>0 ? (predCorr/predTot*100).toFixed(0)+'%' : '—';
+
+  if (rounds.length >= 30) {
+    const l7 = layer7_chiSquare();
+    if (l7) {
+      document.getElementById('statChi2').innerText = l7.chi2;
+      document.getElementById('statChi2').style.color = l7.hasStructure ? 'var(--green)' : 'var(--yellow)';
+      document.getElementById('statStructure').innerText = l7.hasStructure ? '✓ Pattern' : '〰 Random';
+      document.getElementById('statStructure').style.color = l7.hasStructure ? 'var(--green)' : 'var(--orange)';
+    }
+  }
+
+  const circ = 2*Math.PI*25;
+  const bigFrac = bigC/tot;
+  const bigArc = bigFrac*circ;
+  const smlArc = (1-bigFrac)*circ;
+  document.getElementById('donutBig').setAttribute('stroke-dasharray', `${bigArc} ${circ}`);
+  document.getElementById('donutBig').setAttribute('stroke-dashoffset', circ*0.25);
+  document.getElementById('donutSml').setAttribute('stroke-dasharray', `${smlArc} ${circ}`);
+  document.getElementById('donutSml').setAttribute('stroke-dashoffset', circ*0.25 - bigArc);
+  document.getElementById('chartLegend').innerHTML =
+    `<div style="color:var(--big)">● BIG: ${bigC} (${(bigFrac*100).toFixed(1)}%)</div>
+     <div style="color:var(--sml)">● SML: ${smlC} (${((1-bigFrac)*100).toFixed(1)}%)</div>
+     <div style="color:var(--text3);margin-top:4px;">Accuracy: ${predTot>0?(predCorr/predTot*100).toFixed(0)+'%':'—'}</div>`;
+
+  // Heatmap
+  const counts = Array(10).fill(0);
+  rounds.forEach(r => counts[r.number]++);
+  const maxCount = Math.max(...counts)||1;
+  document.getElementById('heatmapGrid').innerHTML = counts.map((c,n) => {
+    const intensity = c/maxCount;
+    const isBig = n>=5;
+    const col = isBig ? `rgba(59,130,246,${0.1+intensity*0.8})` : `rgba(239,68,68,${0.1+intensity*0.8})`;
+    const textCol = isBig ? 'var(--big)' : 'var(--sml)';
+    return `<div class="heat-cell" style="background:${col};border-color:${textCol}40;">
+      <div class="heat-num" style="color:${textCol}">${n}</div>
+      <div class="heat-count">${c}x</div>
+    </div>`;
+  }).join('');
+
+  // Streak bar
+  const last30 = rounds.slice(-30);
+  document.getElementById('streakBar').innerHTML = last30.map(r=>
+    `<div class="streak-dot ${r.type==='B'?'b':'s'}">${r.number}</div>`).join('');
+
+  let cStreak=1, cType=rounds[rounds.length-1]?.type;
+  for(let i=rounds.length-2;i>=0;i--) { if(rounds[i].type===cType)cStreak++; else break; }
+  let maxStreak=0, mRun=1;
+  for(let i=1;i<rounds.length;i++) { mRun=rounds[i].type===rounds[i-1].type?mRun+1:1; maxStreak=Math.max(maxStreak,mRun); }
+  document.getElementById('streakInfo').innerHTML =
+    `Current streak: <span style="color:${cType==='B'?'var(--big)':'var(--sml)'};font-weight:700;">${cStreak}× ${cType==='B'?'BIG':'SML'}</span> &nbsp;|&nbsp; Longest: <span style="color:var(--yellow);font-weight:700;">${maxStreak}</span>`;
+}
+
+// ═══════════════════════════════════════════
+//  HISTORY RENDER
+// ═══════════════════════════════════════════
+function renderHistory() {
+  const body = document.getElementById('historyBody');
+  document.getElementById('histCount').innerText = `${rounds.length} entries (showing last 30)`;
+  body.innerHTML = rounds.slice().reverse().slice(0,30).map((r,i) => {
+    const idx = rounds.length-1-i;
+    const info = getRoundInfo(r.period);
+    const roundStr = info.roundNum>=0 ? `<span class="round-badge">R${info.roundNum}</span>` : '—';
+    const pred = predictions[r.period];
+    const correctStr = pred ? (pred===r.type ? '<span class="correct-tag">✓</span>' : '<span class="wrong-tag">✗</span>') : '—';
+    const predTag = pred ? `<span class="tag tag-${pred==='B'?'big':'sml'}">${pred==='B'?'BIG':'SML'}</span>` : '—';
+    return `<tr>
+      <td style="font-size:10px;">...${r.period.slice(-6)}</td>
+      <td style="font-weight:bold;font-size:14px;">${r.number}</td>
+      <td><span class="tag tag-${r.type==='B'?'big':'sml'}">${r.type==='B'?'BIG':'SML'}</span></td>
+      <td>${roundStr}</td>
+      <td style="color:var(--text3)">${info.posInRound>=0?info.posInRound+1:'—'}</td>
+      <td style="color:var(--text3)">#${idx+1}</td>
+      <td>${predTag}</td>
+      <td>${correctStr}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════
+//  ADD / UNDO
+// ═══════════════════════════════════════════
+function addRound() {
+  const pEl=document.getElementById('inPeriod'), nEl=document.getElementById('inNumber');
+  const status=document.getElementById('addStatus');
+  const num=nEl.value; let per=pEl.value||incPeriod(lastPeriodId);
+  if (num===""||isNaN(num)||parseInt(num)<0||parseInt(num)>9) {
+    status.innerText="Error: Number must be 0–9"; status.className="status-line err"; return;
+  }
+
+  // Before pushing the new result, evaluate current layers against this actual outcome
+  // (The prediction was made BEFORE this round, so we score last prediction's layers)
+  if (rounds.length >= 5) {
+    const actual = classify(num);
+    const l1=layer1_exactMatch(), l2=layer2_sizePattern(),
+          l3=layer3_roundAware(), l4=layer4_streakDetector(),
+          l5=layer5_weightedRecency(), l6=layer6_markovChain(),
+          l7=layer7_chiSquare(), l8=layer8_meanReversion(),
+          l9=layer9_waveSignal(), l10=layer10_rsiCrossover();
+    recordLayerVotes([l1,l2,l3,l4,l5,l6,l7,l8,l9,l10], actual);
+
+    // Track session predictions
+    if (lastPrediction && lastPrediction.period === per) {
+      sessionPredictions.push({ predicted: lastPrediction.vote, actual, period: per });
+      updateSessionDisplay();
+    }
+  }
+
+  rounds.push({ period:per, number:parseInt(num), type:classify(num) });
+  lastPeriodId=per;
+  pEl.value=incPeriod(per); nEl.value="";
+  status.innerText=`✓ Added: ${num} (${classify(num)==='B'?'BIG':'SMALL'}) · Period ${per}`;
+  status.className="status-line ok";
+  updateUI();
+
+  // Store next prediction for session tracking
+  const nextResult = championConsolidate(
+    layer1_exactMatch(), layer2_sizePattern(), layer3_roundAware(), layer4_streakDetector(),
+    layer5_weightedRecency(), layer6_markovChain(), layer7_chiSquare(), layer8_meanReversion(),
+    layer9_waveSignal(), layer10_rsiCrossover()
+  );
+  if (nextResult && !nextResult.skip) {
+    const nextPer = incPeriod(per);
+    lastPrediction = { period: nextPer, vote: nextResult.direction };
+  } else {
+    lastPrediction = null;
+  }
+
+  nEl.focus();
+  playBeep(440, 0.08);
+}
+
+// ═══════════════════════════════════════════
+//  BET SIZING GUIDE
+// ═══════════════════════════════════════════
+let currentTier = null;
+let currentDirection = null;
+let currentSkip = true;
+
+function updateBetSizing(tier, direction, skip) {
+  // Called from updateUI with latest prediction state
+  // Also called from balance input oninput
+  if (tier !== undefined) { currentTier = tier; currentDirection = direction; currentSkip = skip; }
+
+  const panel = document.getElementById('betSizingPanel');
+  if (!panel) return;
+
+  const balanceEl = document.getElementById('betBalance');
+  const balance = parseFloat(balanceEl?.value) || 0;
+
+  // Always show panel once engine has fired at least once
+  panel.style.display = 'block';
+
+  const subtitle = document.getElementById('betSizingSubtitle');
+  const recLabel = document.getElementById('betRecommendLabel');
+  const tierBadge = document.getElementById('betTierBadge');
+  const adviceLine = document.getElementById('betAdviceLine');
+
+  // Tier config
+  const tierConfig = {
+    'HIGH':   { pct: 0.08, color: 'var(--green)',  bg: 'rgba(34,197,94,0.15)',  border: 'rgba(34,197,94,0.4)',  label: '🟢 HIGH',  advice: `Strong signal — bet 8% confidently. If it loses, drop to MEDIUM next round. Don't increase bet size after a loss.` },
+    'MEDIUM': { pct: 0.04, color: 'var(--yellow)', bg: 'rgba(234,179,8,0.15)',  border: 'rgba(234,179,8,0.4)',  label: '🟡 MEDIUM', advice: `Decent signal — bet 4%. Layers mostly agree but not unanimous. Standard play.` },
+    'LOW':    { pct: 0.02, color: 'var(--text2)',  bg: 'rgba(148,163,184,0.1)', border: 'rgba(148,163,184,0.2)', label: '⚪ LOW',   advice: `Weak signal — minimum bet only (2%). Layers barely agree. Treat this as a near-skip — protect your balance.` },
+    'SKIP':   { pct: 0,    color: 'var(--sml)',    bg: 'rgba(239,68,68,0.08)',  border: 'rgba(239,68,68,0.2)',  label: '⛔ SKIP',  advice: `Layers are conflicted — no clear edge this round. Sitting out protects your balance. Don't bet against the tool here.` },
+  };
+
+  const tier = currentSkip ? 'SKIP' : (currentTier || 'LOW');
+  const cfg = tierConfig[tier] || tierConfig['SKIP'];
+
+  // Update tier badge
+  tierBadge.style.background = cfg.bg;
+  tierBadge.style.border = `1px solid ${cfg.border}`;
+  tierBadge.style.color = cfg.color;
+  tierBadge.innerText = cfg.label;
+
+  subtitle.innerText = currentSkip
+    ? 'No prediction this round — engine skipping'
+    : `Predicting: ${currentDirection === 'B' ? '🔵 BIG' : '🔴 SMALL'}`;
+
+  // Bet amounts
+  const fmt = (n) => balance > 0 ? Math.round(n).toLocaleString() : '—';
+  document.getElementById('betAmtHigh').innerText = fmt(balance * 0.08);
+  document.getElementById('betAmtMed').innerText  = fmt(balance * 0.04);
+  document.getElementById('betAmtLow').innerText  = fmt(balance * 0.02);
+  document.getElementById('betStopLoss').innerText   = fmt(balance * 0.70);
+  document.getElementById('betTakeProfit').innerText = fmt(balance * 1.50);
+
+  // Recommended bet
+  if (balance > 0) {
+    const betAmt = Math.round(balance * cfg.pct);
+    recLabel.style.color = cfg.color;
+    recLabel.innerText = tier === 'SKIP' ? 'SIT OUT' : `${betAmt.toLocaleString()} units`;
+  } else {
+    recLabel.style.color = 'var(--text3)';
+    recLabel.innerText = tier === 'SKIP' ? 'SIT OUT' : `${(cfg.pct*100).toFixed(0)}% of balance`;
+  }
+
+  adviceLine.innerText = cfg.advice;
+}
+
+function resetSession() {
+  sessionPredictions = [];
+  lastPrediction = null;
+  updateSessionDisplay();
+  showToast('↺ Session reset');
+}
+
+function updateSessionDisplay() {
+  const played = sessionPredictions.length;
+  const won = sessionPredictions.filter(p => p.predicted === p.actual).length;
+  const rate = played > 0 ? (won / played * 100) : null;
+
+  document.getElementById('sess_played').innerText = played;
+  document.getElementById('sess_won').innerText = won;
+  document.getElementById('sess_rate').innerText = rate !== null ? rate.toFixed(0)+'%' : '—';
+
+  const rateEl = document.getElementById('sess_rate');
+  if (rate !== null) {
+    rateEl.style.color = rate >= 55 ? 'var(--green)' : rate >= 48 ? 'var(--yellow)' : 'var(--sml)';
+  }
+
+  const trendEl = document.getElementById('sess_trend');
+  if (played === 0) {
+    trendEl.innerText = 'Track predictions in real-time →';
+    trendEl.style.color = 'var(--text3)';
+  } else if (played < 10) {
+    trendEl.innerText = `${10-played} more predictions needed for reliable rate`;
+    trendEl.style.color = 'var(--text3)';
+  } else {
+    // Show last 5 results as dots
+    const last5 = sessionPredictions.slice(-5);
+    const dots = last5.map(p => p.predicted === p.actual ? '🟢' : '🔴').join(' ');
+    trendEl.innerHTML = `Last 5: ${dots} <span style="color:var(--text3)"> · ${played} total</span>`;
+  }
+}
+
+function undoLast() {
+  if (rounds.length===0) { showToast('⚠ Nothing to undo'); return; }
+  const removed = rounds.pop();
+  lastPeriodId = rounds.length>0 ? rounds[rounds.length-1].period : null;
+  document.getElementById('inPeriod').value = removed.period;
+  document.getElementById('addStatus').innerText = `↩ Undone: ${removed.number} (${removed.type}) removed`;
+  document.getElementById('addStatus').className = 'status-line';
+  updateUI();
+  showToast(`↩ Undone: ${removed.number} removed`);
+  playBeep(300, 0.1);
+}
+
+// ═══════════════════════════════════════════
+//  CLAUDE AI (enhanced with wave data)
+// ═══════════════════════════════════════════
+async function askClaudeAI() {
+  if (rounds.length < 6) { showToast('⚠ Need 6+ entries for AI analysis'); return; }
+  const aiContent = document.getElementById('aiContent');
+  const aiBtn = document.getElementById('aiBtn');
+  aiBtn.disabled = true;
+  aiContent.innerHTML = `<div class="ai-loading">
+    <div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>
+    <span style="margin-left:4px;">Claude is analyzing patterns + wave signal...</span>
+  </div>`;
+
+  const avgs = getCycleAverages();
+  const l9 = layer9_waveSignal();
+  const rsi = calcRSI(avgs);
+  const magCenter = getMagneticCenter(avgs);
+
+  const last20 = rounds.slice(-20).map((r,i)=>`${i+1}. Period:${r.period} → ${r.number} (${r.type==='B'?'BIG':'SMALL'})`).join('\n');
+  const bigCount = rounds.slice(-20).filter(r=>r.type==='B').length;
+  const smlCount = 20 - bigCount;
+  let streak=1; const lt=rounds[rounds.length-1].type;
+  for(let i=rounds.length-2;i>=0;i--){if(rounds[i].type===lt)streak++;else break;}
+
+  const waveSummary = avgs.length>0 ?
+    `Wave Signal (last ${Math.min(5,avgs.length)} cycle averages): ${avgs.slice(-5).map(a=>a.avg.toFixed(2)).join(' → ')}
+Current wave phase: ${l9?l9.phase:'Unknown'}
+RSI: ${rsi!==null?rsi:'N/A'} (${rsi<30?'OVERSOLD':rsi>70?'OVERBOUGHT':'NEUTRAL'})
+Magnetic center: ${magCenter.toFixed(2)} (${magCenter>4.5?'game biased BIG':'game biased SMALL'})` : 'Wave data: insufficient cycles';
+
+  const prompt = `You are an expert Wingo game analyst. Analyze this data with special attention to the wave signal patterns.
+
+Last 20 rounds:
+${last20}
+
+Current stats (last 20):
+- BIG: ${bigCount} (${(bigCount/20*100).toFixed(0)}%)  SMALL: ${smlCount} (${(smlCount/20*100).toFixed(0)}%)
+- Current streak: ${streak}× ${lt==='B'?'BIG':'SMALL'}
+- Total rounds: ${rounds.length}
+
+${waveSummary}
+
+Analyze ALL signals: sequence patterns, streak psychology, wave phase position, RSI level, and magnetic center bias. Give your prediction (BIG or SMALL) with confidence (Low/Medium/High) and 3-4 sentence reasoning covering the wave signal specifically.
+Format: PREDICTION: [BIG/SMALL] | CONFIDENCE: [Low/Medium/High]
+REASON: [your analysis including wave interpretation]`;
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+    const data = await response.json();
+    const text = data.content.map(c=>c.text||'').join('');
+    const isBig = text.includes('PREDICTION: BIG') || text.toLowerCase().includes('prediction: big');
+    const isHigh = text.toLowerCase().includes('confidence: high');
+    const aiColor = isBig ? 'var(--big)' : 'var(--sml)';
+    aiContent.innerHTML = `<div style="font-size:12px;font-weight:700;color:${aiColor};margin-bottom:6px;font-family:var(--mono);">
+      ${isBig?'📈':'📉'} ${isBig?'BIG':'SMALL'} ${isHigh?'🔒':'〰'} ${isHigh?'HIGH CONFIDENCE':'MODERATE'}
+    </div>
+    <div class="ai-response">${text.replace(/\n/g,'<br>')}</div>`;
+    if (isHigh) playHighConfidenceAlert();
+  } catch(err) {
+    aiContent.innerHTML = `<div style="color:var(--sml);font-size:10px;font-family:var(--mono);">AI unavailable: ${err.message}</div>`;
+  }
+  aiBtn.disabled = false;
+}
+
+// ═══════════════════════════════════════════
+//  EXPORT CSV
+// ═══════════════════════════════════════════
+function exportCSV() {
+  if (rounds.length===0) { showToast('⚠ No data to export'); return; }
+  let csv = 'Period,Number,Type,Round,Position,Predicted,Correct\n';
+  rounds.forEach(r => {
+    const info = getRoundInfo(r.period);
+    const pred = predictions[r.period]||'';
+    const correct = pred ? (pred===r.type?'YES':'NO') : '';
+    csv += `${r.period},${r.number},${r.type==='B'?'BIG':'SMALL'},${info.roundNum},${info.posInRound+1},${pred},${correct}\n`;
+  });
+  const blob = new Blob([csv], { type:'text/csv' });
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`wingo_session_${Date.now()}.csv`; a.click();
+  showToast('✓ CSV exported!');
+}
+
+// ═══════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════
+function switchTab(tab, el) {
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  if (el) el.classList.add('active');
+  activeTab = tab;
+  // Redraw canvases when switching to wave/rsi tabs
+  if (tab === 'wave' || tab === 'rsi') {
+    setTimeout(() => {
+      const avgs = getCycleAverages();
+      drawWaveCanvas(avgs);
+      drawCrossoverCanvas(avgs);
+      updateRSITab(layer10_rsiCrossover());
+    }, 50);
+  }
+}
+
+// ═══════════════════════════════════════════
+//  TIMER
+// ═══════════════════════════════════════════
+function startTimer() {
+  stopTimer();
+  timerTotal = parseInt(document.getElementById('timerInterval').value)||60;
+  timerSeconds = timerTotal;
+  renderTimer();
+  timerIntervalId = setInterval(() => {
+    timerSeconds--;
+    if (timerSeconds<=0) {
+      timerSeconds=timerTotal;
+      playBeep(880, 0.3, 'sawtooth');
+      showToast('🔔 New round starting!');
+    }
+    renderTimer();
+  }, 1000);
+}
+
+function stopTimer() {
+  if (timerIntervalId) { clearInterval(timerIntervalId); timerIntervalId=null; }
+}
+
+function renderTimer() {
+  const m=Math.floor(timerSeconds/60), s=timerSeconds%60;
+  document.getElementById('timerDisplay').innerText = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  document.getElementById('timerBar').style.width = `${(timerSeconds/timerTotal)*100}%`;
+  const col = timerSeconds<=10?'var(--sml)':timerSeconds<=20?'var(--yellow)':'var(--green)';
+  document.getElementById('timerDisplay').style.color = col;
+  document.getElementById('timerBar').style.background = col;
+}
+
+// ═══════════════════════════════════════════
+//  SOUND & WAKE LOCK
+// ═══════════════════════════════════════════
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  const btn = document.getElementById('soundBtn');
+  btn.innerText = soundEnabled ? '🔊 Sound: ON' : '🔇 Sound: OFF';
+  btn.classList.toggle('active', soundEnabled);
+  if (soundEnabled) playBeep(550, 0.1);
+}
+
+// ═══════════════════════════════════════════
+//  DATA HEALTH PANEL
+// ═══════════════════════════════════════════
+function updateDataHealthPanel() {
+  const panel = document.getElementById('dataHealthPanel');
+  if (!panel || rounds.length === 0) return;
+  panel.style.display = 'block';
+
+  const total = rounds.length;
+  const bigCount = rounds.filter(r => r.type === 'B').length;
+  const bigPct = (bigCount / total * 100).toFixed(1);
+  const smallPct = (100 - parseFloat(bigPct)).toFixed(1);
+
+  document.getElementById('dh_total').innerText = total.toLocaleString();
+  document.getElementById('dh_ratio').innerText = bigPct + '%';
+
+  const ratioDev = Math.abs(parseFloat(bigPct) - 50);
+  let warnText = '';
+  let warnColor = 'var(--text2)';
+
+  if (ratioDev < 2) {
+    warnText = `✓ Near-perfect 50/50 split (${bigPct}% Big / ${smallPct}% Small)\nThis game is highly random. Base win rate is ~50%. The engine skips weak signals to only fire on rare high-confidence moments.`;
+    warnColor = 'var(--green)';
+  } else if (ratioDev < 5) {
+    warnText = `~ Slight ${parseFloat(bigPct) > 50 ? 'Big' : 'Small'} bias (${bigPct}% Big). Still ~50/50. Patterns can appear random.`;
+    warnColor = 'var(--yellow)';
+  } else {
+    warnText = `⚠ Notable ${parseFloat(bigPct) > 50 ? 'Big' : 'Small'} bias (${bigPct}% Big). Mean-reversion layer active.`;
+    warnColor = 'var(--orange)';
+  }
+
+  const warnEl = document.getElementById('dh_warning');
+  warnEl.style.color = warnColor;
+  warnEl.style.whiteSpace = 'pre-wrap';
+  warnEl.innerText = warnText;
+}
+
+async function toggleWakeLock() {
+  const btn = document.getElementById('wakeBtn');
+  if (!wakeLock) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      btn.innerText='🔆 Screen: ON'; btn.classList.add('active');
+    } catch(e) {}
+  } else {
+    wakeLock.release().then(()=>{ wakeLock=null; btn.innerText='🔆 Screen: OFF'; btn.classList.remove('active'); });
+  }
+}
+
+// ═══════════════════════════════════════════
+//  FILE UPLOAD
+// ═══════════════════════════════════════════
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  const status=document.getElementById('uploadStatus');
+  status.innerText="Reading file...";
+  const reader=new FileReader();
+  reader.onload=function(ev) {
+    try {
+      const wb=XLSX.read(ev.target.result,{type:'array'});
+      const json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+      if (json.length===0) throw new Error("Empty file");
+      const keys=Object.keys(json[0]);
+      const pk=keys.find(k=>k.toLowerCase().includes('period')||k.toLowerCase().includes('issue')||k.toLowerCase()==='id');
+      const nk=keys.find(k=>k.toLowerCase().includes('num')||k.toLowerCase().includes('result')||k.toLowerCase()==='no');
+      if (!nk) throw new Error("Cannot find Number/Result column");
+      let newRounds=json.map(row=>({
+        period:String(row[pk]||""), number:parseInt(row[nk]), type:classify(row[nk])
+      })).filter(r=>!isNaN(r.number)&&r.number>=0&&r.number<=9);
+      if (newRounds.length>1) {
+        try { if (BigInt(newRounds[0].period)>BigInt(newRounds[newRounds.length-1].period)) newRounds.reverse(); } catch(e){}
+      }
+      rounds=newRounds; lastPeriodId=rounds[rounds.length-1].period;
+      document.getElementById('inPeriod').value=incPeriod(lastPeriodId);
+      updateUI();
+      // rCount = unique 10-round groups (each group has up to 10 entries)
+      // This is NOT the number of "rounds" in the colloquial sense — it's period÷10 buckets
+      // We show actual data rows loaded as the primary number
+      const uniqueGroups=new Set(rounds.map(r=>getRoundInfo(r.period).roundNum)).size;
+      const avgs=getCycleAverages();
+      status.innerText=`✓ Loaded ${rounds.length} data rows · ${uniqueGroups} 10-round groups · ${avgs.length} wave cycles`;
+      status.className="status-line ok";
+      showToast(`✓ ${rounds.length} rows loaded · ${avgs.length} wave cycles ready`);
+      updateDataHealthPanel();
+    } catch(err) {
+      status.innerText="Error: "+err.message; status.className="status-line err";
+    }
+  };
+  reader.readAsArrayBuffer(e.target.files[0]);
+});
+
+// Enter key + resize
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.getElementById('inNumber').addEventListener('keydown', e=>{ if(e.key==='Enter') addRound(); });
+});
+
+window.addEventListener('resize', () => {
+  if (activeTab==='wave'||activeTab==='rsi') {
+    const avgs = getCycleAverages();
+    drawWaveCanvas(avgs);
+    drawCrossoverCanvas(avgs);
+  }
+});
+</script>
+</body>
+</html>
